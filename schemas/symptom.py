@@ -18,12 +18,17 @@ class SymptomExtractionResult(BaseModel):
 
     duration: str | None = Field(
         default=None,
-        description="Patient-reported duration, e.g. '3 days'. Core field — never truncated.",
+        description=(
+            "Patient-reported duration, e.g. '3 days'. "
+            "Core field — never truncated."
+        ),
     )
 
     severity_indicators: list[str] = Field(
         default_factory=list,
-        description="Detected severity modifiers. Core field — never truncated.",
+        description=(
+            "Detected severity modifiers. Core field — never truncated."
+        ),
     )
 
     medical_entities: list[str] = Field(

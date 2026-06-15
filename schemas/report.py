@@ -24,7 +24,9 @@ class TriageReport(BaseModel):
     )
 
     text: str = Field(
-        description="The generated markdown report containing all six required sections."
+        description=(
+            "The generated markdown report containing all six required sections."
+        )
     )
 
     citations: list[str] = Field(

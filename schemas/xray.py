@@ -23,7 +23,9 @@ class XRayResult(BaseModel):
 
     free_text: str | None = Field(
         default=None,
-        description="Unstructured clinician findings not covered by the checklist.",
+        description=(
+            "Unstructured clinician findings not covered by the checklist."
+        ),
     )
 
     schema_version: str = "1.0"

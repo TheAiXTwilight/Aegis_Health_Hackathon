@@ -34,6 +34,9 @@ class AegisState(BaseModel):
         None         — tool has not run yet, or input was absent
         <Result>     — tool ran successfully
         ToolError    — tool ran but failed (fatal flag controls pipeline continuation)
+
+    Mutation is intentional and required throughout the pipeline.
+    Do not add model_config frozen=True.
     """
 
     # ── Session ──────────────────────────────────────────────
@@ -52,10 +55,6 @@ class AegisState(BaseModel):
     xray_image_path: str | None = None
     medications_raw: list[str] = Field(default_factory=list)
 
-    # X-ray clinician findings, collected in the UI BEFORE submission.
-    # XRayProcessor (Step 3) consumes these along with DICOM metadata to
-    # produce XRayResult. Spec rule: "All inputs — including all clinician
-    # X-ray findings — are collected in the UI before submission."
     xray_findings_raw: list[str] = Field(
         default_factory=list,
         description=(
@@ -80,11 +79,17 @@ class AegisState(BaseModel):
     # ── Pipeline Metadata ────────────────────────────────────
     tools_run: list[str] = Field(
         default_factory=list,
-        description="Tool names that completed successfully. Mutually exclusive with tools_failed.",
+        description=(
+            "Tool names that completed successfully. "
+            "Mutually exclusive with tools_failed."
+        ),
     )
     tools_failed: list[str] = Field(
         default_factory=list,
-        description="Tool names that produced a ToolError. Mutually exclusive with tools_run.",
+        description=(
+            "Tool names that produced a ToolError. "
+            "Mutually exclusive with tools_run."
+        ),
     )
 
     pipeline_complete: bool = False
