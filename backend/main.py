@@ -15,6 +15,7 @@ Upload storage:
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 import asyncio
 import contextlib
 import json
@@ -161,7 +162,6 @@ async def submit(
         409 — duplicate job or active session
         503 — queue full
     """
-    # Parse JSON-encoded form fields.
     try:
         medications_list = json.loads(medications)
         if not isinstance(medications_list, list) or not all(
@@ -194,7 +194,6 @@ async def submit(
             status_code=400,
         )
 
-    # At least one input modality must be provided.
     if not any([
         symptoms_text, audio, lab_pdf, xray_image,
         medications_list, xray_findings_list, xray_free_text,
@@ -208,7 +207,6 @@ async def submit(
             status_code=400,
         )
 
-    # Pre-build state to get a server-generated session_id.
     state = AegisState(
         raw_symptoms_text=symptoms_text,
         medications_raw=medications_list,
@@ -216,11 +214,9 @@ async def submit(
         xray_free_text_raw=xray_free_text,
     )
 
-    # Per-session upload directory.
     session_dir = UPLOAD_ROOT / state.session_id
     session_dir.mkdir(parents=True, exist_ok=True)
 
-    # Save uploaded files to disk.
     try:
         if audio is not None:
             state.audio_file_path = str(
@@ -245,24 +241,26 @@ async def submit(
             status_code=400,
         )
 
-    # Validate uploads.
-    validators_with_inputs = [
-        (validate_medications, state.medications_raw),
-        (validate_audio, state.audio_file_path),
-        (validate_lab_pdf, state.lab_pdf_path),
-        (validate_xray_image, state.xray_image_path),
-    ]
-    for validator, input_value in validators_with_inputs:
-        if input_value is None or input_value == []:
-            continue
-        err = validator(input_value)
+    if state.medications_raw:
+        err = validate_medications(state.medications_raw)
         if err is not None:
             _cleanup_on_rejection(session_dir)
             return _tool_error_response(err, status_code=400)
 
-    # Build and submit job.
-    # No try/except ValidationError here. Both objects are already
-    # constructed and valid. submit_job() only inspects them.
+    file_validators: list[tuple[Callable[[str], ToolError | None], str | None]] = [
+        (validate_audio, state.audio_file_path),
+        (validate_lab_pdf, state.lab_pdf_path),
+        (validate_xray_image, state.xray_image_path),
+    ]
+
+    for validator, path in file_validators:
+        if path is None:
+            continue
+        err = validator(path)
+        if err is not None:
+            _cleanup_on_rejection(session_dir)
+            return _tool_error_response(err, status_code=400)
+
     job = PipelineJob(session_id=state.session_id)
     result = await submit_job(job, state)
 
@@ -297,7 +295,10 @@ async def status(job_id: str) -> dict[str, Any]:
     """Return live status payload for a job. 404 if unknown or purged."""
     payload = get_status_payload(job_id)
     if payload is None:
-        raise HTTPException(status_code=404, detail=f"Unknown job_id: {job_id}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown job_id: {job_id}",
+        )
     return payload
 
 

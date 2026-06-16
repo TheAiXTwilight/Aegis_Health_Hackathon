@@ -48,8 +48,6 @@ async def stream(job_id: str) -> StreamingResponse:
         )
 
     if job.status == JobStatus.QUEUED:
-        # Job exists but the worker has not started it yet.
-        # 425 Too Early is the precise semantic per the spec.
         raise HTTPException(
             status_code=425,
             detail=(
@@ -60,9 +58,6 @@ async def stream(job_id: str) -> StreamingResponse:
 
     stream_q = get_stream_queue(job_id)
     if stream_q is None:
-        # Job is RUNNING/COMPLETED/FAILED but the stream queue is gone.
-        # Only possible if the job was purged between the get_job() call
-        # above and now — extremely rare, but treat as 404 for the client.
         raise HTTPException(
             status_code=404,
             detail=f"Stream for job_id={job_id} is no longer available.",

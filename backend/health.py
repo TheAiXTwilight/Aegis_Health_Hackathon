@@ -42,10 +42,6 @@ router = APIRouter()
 
 
 # ── Hardware probes ───────────────────────────────────────────────
-# Ported from files2/health.py. Jetson-aware: checks device nodes
-# before falling back to nvidia-smi and tegrastats.
-# torch is never imported — avoids loading a large framework just
-# for a health check.
 
 def _gpu_available() -> bool:
     """
@@ -58,7 +54,6 @@ def _gpu_available() -> bool:
 
     Returns False on any failure — health endpoint must never raise.
     """
-    # Jetson exposes these device nodes when the GPU is active.
     if os.path.exists("/dev/nvhost-gpu") or os.path.exists("/dev/nvidiactl"):
         return True
 
@@ -94,12 +89,10 @@ def _memory_mb() -> tuple[int | None, int | None]:
     Return (used_mb, total_mb).
 
     Probe order:
-        1. nvidia-smi GPU memory  (preferred on Jetson — reflects VRAM used
-           by Ollama, which is the memory we actually care about)
-        2. /proc/meminfo system RAM  (fallback — reflects total process memory)
+        1. nvidia-smi GPU memory
+        2. /proc/meminfo system RAM
 
-    Returns (None, None) if both probes fail — callers receive null in the
-    health response rather than a misleading value.
+    Returns (None, None) if both probes fail.
     """
     try:
         result = subprocess.run(
@@ -146,17 +139,11 @@ async def health() -> dict[str, Any]:
     """
     Return current system status.
 
-    Implemented (real values, available now):
-        system_status                — "ok" until system-level checks land
-        inference_active             — True iff worker holds the lock
-        gpu_available                — Jetson device node / nvidia-smi / tegrastats
-        memory_used_mb               — nvidia-smi VRAM or /proc/meminfo used
-        memory_total_mb              — nvidia-smi VRAM total or /proc/meminfo total
-        queue_depth                  — current FIFO depth
-        queue_max                    — MAX_QUEUE_SIZE
-        average_pipeline_duration_s  — rolling avg of last 10, null if < 3
-        jobs_completed_today         — in-memory counter, resets on restart
-        jobs_failed_today            — in-memory counter, resets on restart
+    Implemented (real values):
+        system_status, inference_active, gpu_available,
+        memory_used_mb, memory_total_mb, queue_depth, queue_max,
+        average_pipeline_duration_s, jobs_completed_today,
+        jobs_failed_today
 
     Placeholder (honest False/null until backing infra lands):
         model_loaded    — False    (Ollama warmup probe, Week 2)
@@ -167,11 +154,11 @@ async def health() -> dict[str, Any]:
     return {
         "system_status":               "ok",
         "inference_active":            is_inference_active(),
-        "model_loaded":                False,          # Week 2: real Ollama probe
+        "model_loaded":                False,
         "gpu_available":               _gpu_available(),
         "memory_used_mb":              used_mb,
         "memory_total_mb":             total_mb,
-        "rag_index_ready":             False,          # Week 2: ChromaDB/FAISS probe
+        "rag_index_ready":             False,
         "queue_depth":                 get_queue_depth(),
         "queue_max":                   get_queue_max(),
         "average_pipeline_duration_s": get_average_pipeline_duration_s(),

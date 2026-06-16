@@ -28,6 +28,11 @@ class PipelineRunner(Protocol):
 
 
 # ── Constants ────────────────────────────────────────────────────
+# NOTE: All state below is module-level.
+# This works correctly only with a single Uvicorn worker
+# (--workers 1), which is mandatory per the spec.
+# Running --workers 2 would give each worker independent state
+# and silently break queue, job store, and stream isolation.
 
 MAX_QUEUE_SIZE = 10
 PIPELINE_TIMEOUT_S = 180
@@ -44,6 +49,8 @@ _job_queue: deque[str] = deque()
 _job_streams: dict[str, asyncio.Queue[str | None]] = {}
 _session_states: dict[str, AegisState] = {}
 
+# asyncio.Lock() created at module import time.
+# Safe in Python 3.10+ — no running event loop required for Lock creation.
 _inference_lock: asyncio.Lock = asyncio.Lock()
 
 _completed_durations: deque[float] = deque(maxlen=100)
@@ -185,9 +192,6 @@ def get_status_payload(job_id: str) -> dict[str, Any] | None:
     payload["queue_position"]         = get_queue_position(job_id)
     payload["estimated_wait_seconds"] = get_estimated_wait_seconds(job_id)
 
-    # Pipeline state — populated from AegisState while RUNNING, empty otherwise.
-    # AegisPipeline writes current_tool directly onto state, so this is the
-    # single source of truth — no pipeline instance registry needed.
     state = _session_states.get(job.session_id)
     if state is not None:
         payload["current_tool"]      = state.current_tool
@@ -221,7 +225,10 @@ async def submit_job(
     if job.status != JobStatus.QUEUED:
         return ToolError(
             tool="queue",
-            reason=f"Only queued jobs can be submitted. Got status={job.status.value!r}.",
+            reason=(
+                f"Only queued jobs can be submitted. "
+                f"Got status={job.status.value!r}."
+            ),
             fatal=True,
         )
 

@@ -64,7 +64,11 @@ def _is_wav_header(path: str) -> bool:
             header = f.read(12)
     except OSError:
         return False
-    return len(header) >= 12 and header[:4] == b"RIFF" and header[8:12] == b"WAVE"
+    return (
+        len(header) >= 12
+        and header[:4] == b"RIFF"
+        and header[8:12] == b"WAVE"
+    )
 
 
 def _reject(reason: str, **log_context: object) -> ToolError:
@@ -80,12 +84,20 @@ def validate_lab_pdf(path: str) -> ToolError | None:
     try:
         size = _file_size(path)
     except (FileNotFoundError, OSError) as e:
-        return _reject(f"Cannot read lab PDF: {e}", input="lab_pdf", path=path)
+        return _reject(
+            f"Cannot read lab PDF: {e}",
+            input="lab_pdf",
+            path=path,
+        )
 
     if size > MAX_PDF_BYTES:
         return _reject(
-            f"Lab PDF exceeds size limit: {size} bytes (max {MAX_PDF_BYTES} bytes / 25 MB)",
-            input="lab_pdf", path=path, size=size, limit=MAX_PDF_BYTES,
+            f"Lab PDF exceeds size limit: {size} bytes "
+            f"(max {MAX_PDF_BYTES} bytes / 25 MB)",
+            input="lab_pdf",
+            path=path,
+            size=size,
+            limit=MAX_PDF_BYTES,
         )
     return None
 
@@ -95,12 +107,20 @@ def validate_xray_image(path: str) -> ToolError | None:
     try:
         size = _file_size(path)
     except (FileNotFoundError, OSError) as e:
-        return _reject(f"Cannot read X-ray image: {e}", input="xray_image", path=path)
+        return _reject(
+            f"Cannot read X-ray image: {e}",
+            input="xray_image",
+            path=path,
+        )
 
     if size > MAX_XRAY_BYTES:
         return _reject(
-            f"X-ray image exceeds size limit: {size} bytes (max {MAX_XRAY_BYTES} bytes / 25 MB)",
-            input="xray_image", path=path, size=size, limit=MAX_XRAY_BYTES,
+            f"X-ray image exceeds size limit: {size} bytes "
+            f"(max {MAX_XRAY_BYTES} bytes / 25 MB)",
+            input="xray_image",
+            path=path,
+            size=size,
+            limit=MAX_XRAY_BYTES,
         )
     return None
 
@@ -117,12 +137,20 @@ def validate_audio(path: str) -> ToolError | None:
     try:
         size = _file_size(path)
     except (FileNotFoundError, OSError) as e:
-        return _reject(f"Cannot read audio file: {e}", input="audio", path=path)
+        return _reject(
+            f"Cannot read audio file: {e}",
+            input="audio",
+            path=path,
+        )
 
     if size > MAX_AUDIO_BYTES:
         return _reject(
-            f"Audio exceeds size limit: {size} bytes (max {MAX_AUDIO_BYTES} bytes / 15 MB)",
-            input="audio", path=path, size=size, limit=MAX_AUDIO_BYTES,
+            f"Audio exceeds size limit: {size} bytes "
+            f"(max {MAX_AUDIO_BYTES} bytes / 15 MB)",
+            input="audio",
+            path=path,
+            size=size,
+            limit=MAX_AUDIO_BYTES,
         )
 
     looks_like_wav = _is_wav_header(path)
@@ -135,18 +163,24 @@ def validate_audio(path: str) -> ToolError | None:
         if looks_like_wav:
             return _reject(
                 f"Audio file appears to be WAV but is malformed: {e}",
-                input="audio", path=path,
+                input="audio",
+                path=path,
             )
         logger.info(
             "Audio duration check deferred (non-WAV format)",
-            input="audio", path=path,
+            input="audio",
+            path=path,
         )
         return None
 
     if duration > MAX_AUDIO_SECONDS:
         return _reject(
-            f"Audio exceeds duration limit: {duration:.1f}s (max {MAX_AUDIO_SECONDS}s)",
-            input="audio", path=path, duration=duration, limit=MAX_AUDIO_SECONDS,
+            f"Audio exceeds duration limit: {duration:.1f}s "
+            f"(max {MAX_AUDIO_SECONDS}s)",
+            input="audio",
+            path=path,
+            duration=duration,
+            limit=MAX_AUDIO_SECONDS,
         )
     return None
 
@@ -156,7 +190,10 @@ def validate_medications(medications: list[str]) -> ToolError | None:
     count = len(medications)
     if count > MAX_MEDICATIONS:
         return _reject(
-            f"Medication list exceeds entry limit: {count} entries (max {MAX_MEDICATIONS})",
-            input="medications", count=count, limit=MAX_MEDICATIONS,
+            f"Medication list exceeds entry limit: {count} entries "
+            f"(max {MAX_MEDICATIONS})",
+            input="medications",
+            count=count,
+            limit=MAX_MEDICATIONS,
         )
     return None
