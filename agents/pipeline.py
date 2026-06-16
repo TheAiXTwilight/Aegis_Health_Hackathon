@@ -1,83 +1,68 @@
 """
 agents/pipeline.py — AegisPipeline orchestrator.
 
-Sequential, deterministic, async. Wall-clock bounded by the worker.
-
-Topology:
-    Step 0 — VoiceTranscriber       (optional, skipped if no audio)
-    Step 1 — SymptomExtractor
-    Step 2 — LabReportParser
-    Step 3 — XRayProcessor
-    Step 4 — MedicalRAGSearch
-    Step 5 — DrugInteractionChecker
-    Step 6 — SeverityScorer
-    Step 7 — ReportGenerator        (only step that yields tokens)
-
-Streaming protocol
-──────────────────
-GET /queue/stream/{job_id}  — yields raw report tokens only (plain text,
-    no framing). Consumed by st.write_stream. Nothing else goes into this
-    stream — no events, no status, no protocol markers.
-
-GET /queue/status/{job_id}  — returns job status plus live pipeline state
-    for the sidebar: current_tool, tools_run, tools_failed,
-    step_durations_ms. Frontend polls every 1–2 seconds. No stream parsing
-    required.
-
-These two endpoints serve two distinct concerns and are never mixed.
-
-pipeline_complete and pipeline_end_ms are set in finally so they record
-even for failed runs. pipeline_complete means "pipeline finished"
-(success or failure) — success is indicated by state.report being set.
+Changes from original:
+    - Uses tool name constants from tools.tool_names.
+    - Real tool classes wired in place of stubs.
+    - SymptomExtractor skip condition handles ToolError voice_result.
+    - calculate_confidence() called unconditionally after ReportGenerator.
+    - _run_step return type corrected to object | ToolError | None.
+    - ToolFn type alias updated to Awaitable[object | ToolError].
+    - SeverityScorer.score is async — satisfies _run_step contract.
+    - Async generator return annotations corrected to AsyncGenerator.
 """
+
 from __future__ import annotations
 
 import time
-from typing import AsyncIterator, Awaitable, Callable
+from typing import AsyncGenerator, Awaitable, Callable, TypeVar
 
 from loguru import logger
 
 from schemas.errors import FatalPipelineError, ToolError
 from schemas.state import AegisState
+from schemas.xray import XRayResult
+from tools.confidence import calculate_confidence
+from tools.drug_checker import DrugInteractionChecker
+from tools.lab_report_parser import LabReportParser
+from tools.medical_rag_search import MedicalRAGSearch
 from tools.report_generator import ReportGenerator
+from tools.severity_scorer import SeverityScorer
+from tools.symptom_extractor import SymptomExtractor
+from tools.tool_names import (
+    TOOL_DRUG_INTERACTION_CHECKER,
+    TOOL_LAB_REPORT_PARSER,
+    TOOL_MEDICAL_RAG_SEARCH,
+    TOOL_REPORT_GENERATOR,
+    TOOL_SEVERITY_SCORER,
+    TOOL_SYMPTOM_EXTRACTOR,
+    TOOL_VOICE_TRANSCRIBER,
+    TOOL_XRAY_PROCESSOR,
+)
+from tools.voice_transcriber import VoiceTranscriber
 
-
-ToolFn = Callable[[AegisState], Awaitable[object]]
-
+T = TypeVar("T")
 
 class AegisPipeline:
     """
     Sequential async orchestrator. One instance, application-lifetime.
-
-    Each AegisState flows through Steps 0-7 in order. Steps 0-6 mutate
-    state silently — progress is observable via AegisState fields
-    (current_tool, tools_run, tools_failed, step_durations_ms) which
-    GET /queue/status polls. Step 7 yields raw report tokens only.
+    Steps 0–6 mutate state silently.
+    Step 7 yields raw report tokens only.
     """
 
     def __init__(self) -> None:
-        self._report_generator = ReportGenerator()
+        self._voice_transcriber        = VoiceTranscriber()
+        self._symptom_extractor        = SymptomExtractor()
+        self._lab_report_parser        = LabReportParser()
+        self._medical_rag_search       = MedicalRAGSearch()
+        self._drug_interaction_checker = DrugInteractionChecker()
+        self._severity_scorer          = SeverityScorer()
+        self._report_generator         = ReportGenerator()
 
-    async def run(self, state: AegisState) -> AsyncIterator[str]:
-        """
-        Execute the full pipeline against the given state.
-
-        Yields raw string tokens from Step 7 (ReportGenerator) only.
-        All other steps mutate state in place and return nothing to the
-        caller — progress is readable from state fields.
-
-        On normal completion:
-            state.report is set, state.pipeline_complete is True.
-
-        On fatal failure:
-            FatalPipelineError propagates to backend/queue.py.
-            state.pipeline_complete is True, state.report may be None.
-
-        On infrastructure timeout:
-            asyncio.TimeoutError propagates; state.pipeline_complete is True.
-        """
+    async def run(
+        self, state: AegisState
+    ) -> AsyncGenerator[str, None]:
         state.pipeline_start_ms = time.perf_counter() * 1000
-
         logger.info("Pipeline started", session_id=state.session_id)
 
         try:
@@ -93,9 +78,9 @@ class AegisPipeline:
                 yield token
 
         finally:
-            state.current_tool       = None
-            state.pipeline_end_ms    = time.perf_counter() * 1000
-            state.pipeline_complete  = True
+            state.current_tool      = None
+            state.pipeline_end_ms   = time.perf_counter() * 1000
+            state.pipeline_complete = True
 
             logger.info(
                 "Pipeline finished",
@@ -106,32 +91,24 @@ class AegisPipeline:
                 has_report=state.report is not None,
             )
 
-    # ── Central step execution helper ─────────────────────────────
+    # ── Central step helper ───────────────────────────────────────
 
     async def _run_step(
         self,
         name: str,
-        tool_fn: ToolFn,
+        tool_fn: Callable[[AegisState], Awaitable[T | ToolError]],
         state: AegisState,
-    ) -> object | None:
+    ) -> T | ToolError | None:
         """
         Run one tool, capturing timing, errors, and lifecycle.
 
-        Sets state.current_tool for the duration so /queue/status can
-        report which tool is active without any stream-side signalling.
-
         Returns:
-            The tool's result on success, or
-            ToolError(fatal=False) on non-fatal failure, or
-            None when the tool raised an unhandled exception.
+            Tool result on success.
+            ToolError on non-fatal failure.
+            None on unhandled exception.
 
         Raises:
-            FatalPipelineError when the tool returns ToolError(fatal=True).
-
-        State mutations:
-            - Appends name to tools_run on success.
-            - Appends name to tools_failed on any failure.
-            - Records step_durations_ms[name] always.
+            FatalPipelineError when tool returns ToolError(fatal=True).
         """
         state.current_tool = name
         start = time.perf_counter()
@@ -146,14 +123,12 @@ class AegisPipeline:
                         "Fatal pipeline failure",
                         step=name,
                         reason=result.reason,
-                        tool=result.tool,
                     )
                     raise FatalPipelineError(result)
                 logger.info(
                     "Non-fatal tool error",
                     step=name,
                     reason=result.reason,
-                    tool=result.tool,
                 )
                 return result
 
@@ -178,30 +153,36 @@ class AegisPipeline:
             )
             state.current_tool = None
 
-    # ── Step 0 — VoiceTranscriber (optional) ──────────────────────
+    # ── Step 0 — VoiceTranscriber ─────────────────────────────────
 
     async def _run_voice_transcriber(self, state: AegisState) -> None:
         if state.audio_file_path is None:
             return
         result = await self._run_step(
-            "VoiceTranscriber", _voice_transcriber_stub, state
+            TOOL_VOICE_TRANSCRIBER,
+            self._voice_transcriber.run,
+            state,
         )
-        if result is not None and not isinstance(result, ToolError):
-            state.voice_result = result
-        elif isinstance(result, ToolError):
+        if result is not None:
             state.voice_result = result
 
     # ── Step 1 — SymptomExtractor ─────────────────────────────────
 
     async def _run_symptom_extractor(self, state: AegisState) -> None:
-        if state.raw_symptoms_text is None and state.voice_result is None:
+        # Skip when no text is available AND voice transcription failed
+        # or was not attempted. A ToolError voice_result means
+        # raw_symptoms_text was not populated from audio.
+        if state.raw_symptoms_text is None and (
+            state.voice_result is None
+            or isinstance(state.voice_result, ToolError)
+        ):
             return
         result = await self._run_step(
-            "SymptomExtractor", _symptom_extractor_stub, state
+            TOOL_SYMPTOM_EXTRACTOR,
+            self._symptom_extractor.run,
+            state,
         )
-        if result is not None and not isinstance(result, ToolError):
-            state.symptom_result = result
-        elif isinstance(result, ToolError):
+        if result is not None:
             state.symptom_result = result
 
     # ── Step 2 — LabReportParser ──────────────────────────────────
@@ -210,138 +191,109 @@ class AegisPipeline:
         if state.lab_pdf_path is None:
             return
         result = await self._run_step(
-            "LabReportParser", _lab_report_parser_stub, state
+            TOOL_LAB_REPORT_PARSER,
+            self._lab_report_parser.run,
+            state,
         )
-        if result is not None and not isinstance(result, ToolError):
-            state.lab_result = result
-        elif isinstance(result, ToolError):
+        if result is not None:
             state.lab_result = result
 
-    # ── Step 3 — XRayProcessor ────────────────────────────────────
+    # ── Step 3 — XRayProcessor (stub) ────────────────────────────
 
     async def _run_xray_processor(self, state: AegisState) -> None:
         if state.xray_image_path is None:
             return
         result = await self._run_step(
-            "XRayProcessor", _xray_processor_stub, state
+            TOOL_XRAY_PROCESSOR,
+            _xray_processor_stub,
+            state,
         )
-        if result is not None and not isinstance(result, ToolError):
-            state.xray_result = result
-        elif isinstance(result, ToolError):
+        if result is not None:
             state.xray_result = result
 
     # ── Step 4 — MedicalRAGSearch ─────────────────────────────────
 
     async def _run_medical_rag_search(self, state: AegisState) -> None:
         result = await self._run_step(
-            "MedicalRAGSearch", _medical_rag_search_stub, state
+            TOOL_MEDICAL_RAG_SEARCH,
+            self._medical_rag_search.run,
+            state,
         )
-        if result is not None and not isinstance(result, ToolError):
-            state.rag_result = result
-        elif isinstance(result, ToolError):
+        if result is not None:
             state.rag_result = result
 
-    # ── Step 5 — DrugInteractionChecker ───────────────────────────
+    # ── Step 5 — DrugInteractionChecker ──────────────────────────
 
     async def _run_drug_interaction_checker(self, state: AegisState) -> None:
         if not state.medications_raw:
             return
         result = await self._run_step(
-            "DrugInteractionChecker", _drug_interaction_checker_stub, state
+            TOOL_DRUG_INTERACTION_CHECKER,
+            self._drug_interaction_checker.run,
+            state,
         )
-        if result is not None and not isinstance(result, ToolError):
-            state.drug_result = result
-        elif isinstance(result, ToolError):
+        if result is not None:
             state.drug_result = result
 
     # ── Step 6 — SeverityScorer ───────────────────────────────────
 
     async def _run_severity_scorer(self, state: AegisState) -> None:
         result = await self._run_step(
-            "SeverityScorer", _severity_scorer_stub, state
+            TOOL_SEVERITY_SCORER,
+            self._severity_scorer.score,
+            state,
         )
-        if result is not None and not isinstance(result, ToolError):
-            state.severity_result = result
-        elif isinstance(result, ToolError):
+        if result is not None:
             state.severity_result = result
 
     # ── Step 7 — ReportGenerator ──────────────────────────────────
 
     async def _run_report_generator(
         self, state: AegisState
-    ) -> AsyncIterator[str]:
-        """
-        Stream raw report tokens and write state.report on completion.
-
-        Delegates to ReportGenerator.run() which is an async generator:
-            - yields plain string tokens (no framing)
-            - writes state.report once the stream is exhausted
-            - raises FatalPipelineError on any failure
-
-        tools_run / tools_failed and step timing are managed here,
-        not inside ReportGenerator, consistent with all other steps.
-        """
-        state.current_tool = "ReportGenerator"
+    ) -> AsyncGenerator[str, None]:
+        state.current_tool = TOOL_REPORT_GENERATOR
         start = time.perf_counter()
 
         try:
             async for token in self._report_generator.run(state):
                 yield token
 
-            state.tools_run.append("ReportGenerator")
+            state.tools_run.append(TOOL_REPORT_GENERATOR)
+
+            # Compute confidence unconditionally so it is always
+            # available for diagnostics even if state.report failed.
+            # Assign into report only if it was successfully created.
+            confidence = calculate_confidence(state)
+            if state.report is not None:
+                state.report.confidence = confidence
 
         except FatalPipelineError:
-            state.tools_failed.append("ReportGenerator")
+            state.tools_failed.append(TOOL_REPORT_GENERATOR)
             raise
 
         except Exception as exc:
-            state.tools_failed.append("ReportGenerator")
+            state.tools_failed.append(TOOL_REPORT_GENERATOR)
             logger.exception(
                 "ReportGenerator failed",
                 session_id=state.session_id,
             )
             raise FatalPipelineError(
                 ToolError(
-                    tool="ReportGenerator",
+                    tool=TOOL_REPORT_GENERATOR,
                     reason=str(exc),
                     fatal=True,
                 )
             )
 
         finally:
-            state.step_durations_ms["ReportGenerator"] = (
+            state.step_durations_ms[TOOL_REPORT_GENERATOR] = (
                 (time.perf_counter() - start) * 1000
             )
             state.current_tool = None
 
 
-# ── Tool stubs ────────────────────────────────────────────────────
-# Placeholders replaced by real tool imports as they land in tools/*.
-# The orchestration above does not change when stubs are replaced.
+# ── XRayProcessor stub ────────────────────────────────────────────
+# Replaced by real XRayProcessor in Week 2.
 
-async def _voice_transcriber_stub(state: AegisState) -> object:
-    return None
-
-
-async def _symptom_extractor_stub(state: AegisState) -> object:
-    return None
-
-
-async def _lab_report_parser_stub(state: AegisState) -> object:
-    return None
-
-
-async def _xray_processor_stub(state: AegisState) -> object:
-    return None
-
-
-async def _medical_rag_search_stub(state: AegisState) -> object:
-    return None
-
-
-async def _drug_interaction_checker_stub(state: AegisState) -> object:
-    return None
-
-
-async def _severity_scorer_stub(state: AegisState) -> object:
+async def _xray_processor_stub(state: AegisState) -> XRayResult | ToolError | None:
     return None

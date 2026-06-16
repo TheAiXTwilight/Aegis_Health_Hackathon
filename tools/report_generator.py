@@ -1,61 +1,50 @@
 """
-tools/report_generator.py — Step 7
+tools/report_generator.py — Step 7: LLM report synthesis.
 
-llama3.2:1b synthesis via Ollama. Six-section streaming report.
-Token budget enforced before the LLM call — no silent truncation.
-
-Context prioritization (descending priority under budget pressure):
-    1. SeverityResult          — never truncated
-    2. Core symptoms           — never truncated (symptoms, duration,
-                                 severity_indicators)
-    3. Symptom enrichment      — dropped first under pressure
-                                 (medical_entities, then negations)
-    4. Lab findings            — abnormal values protected; normal
-                                 values dropped first
-    5. Drug interactions       — flagged pairs only if tight
-    6. X-ray positives         — checklist summary only if tight
-    7. RAG passages            — top-2 if tight, omitted last
-
-Truncation flags written back to AegisState:
-    core_fields_truncated       = True  → confidence penalty (severe)
-    enrichment_fields_truncated = True  → confidence penalty (minor)
-
-The confidence formula in tools/confidence.py reads these flags.
-This module only sets them — it never computes confidence directly.
-
-Six required report sections (missing any → ToolError fatal=True):
-    ### Summary
-    ### Findings
-    ### Evidence
-    ### Severity
-    ### Recommendations
-    ### Disclaimer
+Changes from original:
+    - OLLAMA_BASE_URL read from environment variable.
+    - FatalPipelineError import at top level.
+    - DrugInteraction objects formatted from structured fields.
+    - TOOL_REPORT_GENERATOR from tool_names.py.
+    - Async generator return annotation corrected to AsyncGenerator.
 """
+
 from __future__ import annotations
 
+import json as _json
 import math
+import os
+from typing import AsyncGenerator
+
 import httpx
 from loguru import logger
 
-from schemas.errors import ToolError
+from schemas.errors import FatalPipelineError, ToolError
 from schemas.report import TriageReport
 from schemas.state import AegisState
+from tools.tool_names import TOOL_REPORT_GENERATOR
+
 
 # ── Ollama configuration ──────────────────────────────────────────
-OLLAMA_STREAM_URL = "http://localhost:11434/api/generate"
-MODEL_TAG         = "aegis-llama"       # created by entrypoint.sh from Modelfile
+# OLLAMA_BASE_URL read at module import time.
+# For production: set in environment before startup.
+# For tests: mock the httpx call rather than the env var.
+
+OLLAMA_BASE_URL   = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_STREAM_URL = OLLAMA_BASE_URL + "/api/generate"
+MODEL_TAG         = "aegis-llama"
+
 
 # ── Token budget ──────────────────────────────────────────────────
-# All budget constants are owned here — they govern how this tool
-# manages its prompt. APPROX_CHARS_PER_TOKEN is tunable for clinical
-# text on Jetson without touching truncation logic.
+
 NUM_CTX                = 4096
-RESERVE_OUTPUT         = 1024           # num_predict — reserved for generation
-MAX_INPUT_TOKENS       = NUM_CTX - RESERVE_OUTPUT   # 3072
-APPROX_CHARS_PER_TOKEN = 4              # ~1 token per 4 chars; tune if clinical
-                                        # abbreviations (mg/dL, eGFR, ↑) skew short
+RESERVE_OUTPUT         = 1024
+MAX_INPUT_TOKENS       = NUM_CTX - RESERVE_OUTPUT
+APPROX_CHARS_PER_TOKEN = 4
+
 
 # ── Report contract ───────────────────────────────────────────────
+
 REQUIRED_SECTIONS = [
     "### Summary",
     "### Findings",
@@ -68,7 +57,8 @@ REQUIRED_SECTIONS = [
 DISCLAIMER = (
     "Clinical decision support only — not a diagnosis. "
     "All outputs must be reviewed by a qualified healthcare professional "
-    "before any clinical action is taken. Do not use in emergency situations."
+    "before any clinical action is taken. "
+    "Do not use in emergency situations."
 )
 
 MID_STREAM_FAILURE_MESSAGE = (
@@ -120,14 +110,6 @@ Generate the report now:"""
 # ── Token budget helpers ──────────────────────────────────────────
 
 def _estimate_tokens(text: str) -> int:
-    """
-    Rough token estimate for prompt budget enforcement.
-
-    Uses APPROX_CHARS_PER_TOKEN — owned by this module because prompt
-    budget is a ReportGenerator concern. If RAGRetriever ever needs
-    embedding cost estimation, it should own its own heuristic: the
-    two contexts have different requirements and may legitimately diverge.
-    """
     return max(1, math.ceil(len(text) / APPROX_CHARS_PER_TOKEN))
 
 
@@ -135,19 +117,16 @@ def _estimate_tokens(text: str) -> int:
 
 def _build_context(state: AegisState) -> str:
     """
-    Assemble prompt context from AegisState, respecting token budget.
+    Assemble prompt context from AegisState respecting token budget.
 
-    Priority order enforced under budget pressure (see module docstring).
-    Sets state.core_fields_truncated / state.enrichment_fields_truncated
-    as side effects — the confidence formula reads these flags.
-
-    Returns the assembled context string.
+    SIDE EFFECT: sets state.core_fields_truncated and
+    state.enrichment_fields_truncated. Must be called before
+    calculate_confidence().
     """
-    parts: list[str] = []
-    budget = MAX_INPUT_TOKENS
+    parts:  list[str] = []
+    budget: int       = MAX_INPUT_TOKENS
 
     def _add(block: str) -> bool:
-        """Add block if it fits. Returns True if added."""
         nonlocal budget
         cost = _estimate_tokens(block)
         if budget >= cost:
@@ -156,31 +135,28 @@ def _build_context(state: AegisState) -> str:
             return True
         return False
 
-    # ── 1. SeverityResult — NEVER truncated ──────────────────────
+    # 1. SeverityResult — never truncated
     sev = state.severity_result
     if sev and not isinstance(sev, ToolError):
         block = (
-            f"SEVERITY: {sev.level} "
-            f"(confidence {sev.confidence:.0%})\n"
+            f"SEVERITY: {sev.level} (confidence {sev.confidence:.0%})\n"
             f"Highest-priority rule: {sev.highest_priority_rule}\n"
             f"Reasons: {'; '.join(sev.reasons)}"
         )
         if not _add(block):
-            # SeverityResult must always fit — if it doesn't, something
-            # is structurally wrong with the prompt template.
             logger.error(
-                "report_generator · SeverityResult exceeded token budget — "
-                "increase MAX_INPUT_TOKENS or reduce RESERVE_OUTPUT"
+                "report_generator · SeverityResult exceeded token budget"
             )
             state.core_fields_truncated = True
 
-    # ── 2. Core symptoms — NEVER truncated ───────────────────────
+    # 2. Core symptoms — never truncated
     sym = state.symptom_result
     if sym and not isinstance(sym, ToolError):
         core = (
             f"SYMPTOMS: {', '.join(sym.symptoms)}\n"
             f"Duration: {sym.duration or 'not specified'}\n"
-            f"Severity indicators: {', '.join(sym.severity_indicators) or 'none'}"
+            f"Severity indicators: "
+            f"{', '.join(sym.severity_indicators) or 'none'}"
         )
         if not _add(core):
             logger.error(
@@ -188,9 +164,11 @@ def _build_context(state: AegisState) -> str:
             )
             state.core_fields_truncated = True
 
-        # Enrichment fields — dropped first under pressure.
         if sym.medical_entities:
-            block = f"Medical entities: {', '.join(sym.medical_entities[:10])}"
+            block = (
+                f"Medical entities: "
+                f"{', '.join(sym.medical_entities[:10])}"
+            )
             if not _add(block):
                 state.enrichment_fields_truncated = True
                 logger.warning(
@@ -205,25 +183,21 @@ def _build_context(state: AegisState) -> str:
                     "report_generator · symptom.negations truncated"
                 )
 
-    # ── 3. Lab findings — abnormal values protected ───────────────
+    # 3. Lab findings
     lab = state.lab_result
     if lab and not isinstance(lab, ToolError):
-        # abnormal_values: list[str] — human-readable, per Day1 schema
-        # measurements: dict[str, float] — numeric, for completeness
         if lab.abnormal_values:
             block = (
                 "LAB FINDINGS (abnormal):\n"
                 + "\n".join(f"  {v}" for v in lab.abnormal_values)
             )
             if not _add(block):
-                # Abnormal lab values are core — flag if they don't fit.
                 state.core_fields_truncated = True
                 logger.error(
                     "report_generator · abnormal lab values exceeded budget"
                 )
 
         if lab.measurements and budget > 200:
-            # Include numeric measurements if budget allows.
             lines = [
                 f"  {name}: {value}"
                 for name, value in list(lab.measurements.items())[:10]
@@ -231,24 +205,23 @@ def _build_context(state: AegisState) -> str:
             block = "LAB MEASUREMENTS:\n" + "\n".join(lines)
             if not _add(block):
                 state.enrichment_fields_truncated = True
-                logger.warning(
-                    "report_generator · lab.measurements truncated"
-                )
+                logger.warning("report_generator · lab.measurements truncated")
 
-    # ── 4. Drug interactions ──────────────────────────────────────
+    # 4. Drug interactions — structured DrugInteraction objects
     drug = state.drug_result
     if drug and not isinstance(drug, ToolError) and budget > 150:
         lines = []
         for interaction in drug.interactions:
-            lines.append(f"  INTERACTION: {interaction}")
+            lines.append(
+                f"  {interaction.severity.value.upper()}: "
+                f"{interaction.description}"
+            )
         if drug.unresolved:
             lines.append(
                 f"  Unresolved drugs: {', '.join(drug.unresolved)}"
             )
         if drug.warnings:
-            lines.append(
-                f"  Warnings: {'; '.join(drug.warnings)}"
-            )
+            lines.append(f"  Warnings: {'; '.join(drug.warnings)}")
         if lines:
             block = "DRUG INTERACTIONS:\n" + "\n".join(lines)
             if not _add(block):
@@ -257,23 +230,22 @@ def _build_context(state: AegisState) -> str:
                     "report_generator · drug interactions truncated"
                 )
 
-    # ── 5. X-ray positives ────────────────────────────────────────
+    # 5. X-ray findings
     xray = state.xray_result
     if xray and not isinstance(xray, ToolError) and budget > 100:
-        positives = [f for f in xray.findings if f]   # findings: list[str]
+        positives = [f for f in xray.findings if f]
         if positives:
             block = f"XRAY FINDINGS: {', '.join(positives)}"
             if not _add(block):
                 state.enrichment_fields_truncated = True
-                logger.warning(
-                    "report_generator · xray findings truncated"
-                )
+                logger.warning("report_generator · xray findings truncated")
+
         if xray.free_text and budget > 80:
             block = f"XRAY FREE TEXT: {xray.free_text}"
             if not _add(block):
                 state.enrichment_fields_truncated = True
 
-    # ── 6. RAG passages — top-2, omitted last ────────────────────
+    # 6. RAG passages — top-2, omitted last
     rag = state.rag_result
     if rag and not isinstance(rag, ToolError) and budget > 200:
         for passage in rag.passages[:2]:
@@ -285,10 +257,10 @@ def _build_context(state: AegisState) -> str:
             if not _add(block):
                 state.enrichment_fields_truncated = True
                 logger.warning(
-                    "report_generator · RAG passage truncated · "
-                    "source={}", passage.source
+                    "report_generator · RAG passage truncated",
+                    source=passage.source,
                 )
-                break   # if one passage doesn't fit, skip remaining
+                break
 
     return "\n\n".join(parts)
 
@@ -296,10 +268,6 @@ def _build_context(state: AegisState) -> str:
 # ── Section validator ─────────────────────────────────────────────
 
 def _validate_sections(text: str) -> list[str]:
-    """
-    Return list of required section headers missing from text.
-    Empty list means the report is complete.
-    """
     return [s for s in REQUIRED_SECTIONS if s not in text]
 
 
@@ -307,41 +275,25 @@ def _validate_sections(text: str) -> list[str]:
 
 class ReportGenerator:
     """
-    Step 7 — LLM synthesis.
-
-    Interface contract (matches AegisPipeline._run_report_generator):
-        async def run(state) -> AsyncIterator[str]
-
-    Yields raw string tokens as they arrive from Ollama.
-    Writes state.report once the stream is exhausted and sections
-    are validated. Never yields SSE framing — plain text only.
-
-    On failure, raises FatalPipelineError so the pipeline worker
-    marks the job FAILED. state.report is left None.
+    Step 7 — LLM synthesis via Ollama.
+    Yields raw string tokens. Writes state.report on completion.
+    Raises FatalPipelineError on any failure.
     """
 
-    async def run(self, state: AegisState) -> AsyncIterator[str]:
-        """
-        Stream report tokens and finalise state.report on completion.
+    TOOL_NAME = TOOL_REPORT_GENERATOR
 
-        Yields plain string tokens — no framing, no events.
-        st.write_stream consumes these directly via /queue/stream.
-
-        Raises FatalPipelineError on:
-            - missing SeverityResult
-            - Ollama request failure
-            - missing required report sections
-        """
-        import json as _json
-
-        from schemas.errors import FatalPipelineError
-
+    async def run(
+        self, state: AegisState
+    ) -> AsyncGenerator[str, None]:
         sev = state.severity_result
         if not sev or isinstance(sev, ToolError):
             raise FatalPipelineError(
                 ToolError(
-                    tool="ReportGenerator",
-                    reason="SeverityResult missing or failed — cannot generate report.",
+                    tool=TOOL_REPORT_GENERATOR,
+                    reason=(
+                        "SeverityResult missing or failed — "
+                        "cannot generate report."
+                    ),
                     fatal=True,
                 )
             )
@@ -388,7 +340,7 @@ class ReportGenerator:
         except Exception as exc:
             raise FatalPipelineError(
                 ToolError(
-                    tool="ReportGenerator",
+                    tool=TOOL_REPORT_GENERATOR,
                     reason=f"Ollama request failed: {exc}",
                     fatal=True,
                 )
@@ -397,18 +349,17 @@ class ReportGenerator:
         missing = _validate_sections(full_text)
         if missing:
             logger.error(
-                "report_generator · missing sections · {}",
-                missing,
+                "report_generator · missing sections",
+                missing=missing,
             )
             raise FatalPipelineError(
                 ToolError(
-                    tool="ReportGenerator",
+                    tool=TOOL_REPORT_GENERATOR,
                     reason=f"Report missing required sections: {missing}",
                     fatal=True,
                 )
             )
 
-        # RAG provenance — kb_version/kb_date populated in Week 2.
         rag = state.rag_result
         citations: list[str] = []
         if rag and not isinstance(rag, ToolError):
@@ -416,16 +367,16 @@ class ReportGenerator:
 
         state.report = TriageReport(
             severity               = sev.level,
-            confidence             = 0.0,   # filled by confidence.py after this step
+            confidence             = 0.0,   # filled by calculate_confidence() in pipeline
             text                   = full_text,
             citations              = citations,
             disclaimer             = DISCLAIMER,
             knowledge_base_version = None,
             knowledge_base_date    = None,
         )
+
         logger.info(
-            "report_generator · complete · truncated_core={} · "
-            "truncated_enrichment={}",
-            state.core_fields_truncated,
-            state.enrichment_fields_truncated,
+            "report_generator · complete",
+            truncated_core=state.core_fields_truncated,
+            truncated_enrichment=state.enrichment_fields_truncated,
         )
