@@ -1,0 +1,24 @@
+/* --- GLOBAL RESET & BASE STYLES --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: linear-gradient(
+    145deg,
+    #e2ecfc 0%,
+    #cbdcf7 50%,
+    #b3cdfa 100%
+  );
+}

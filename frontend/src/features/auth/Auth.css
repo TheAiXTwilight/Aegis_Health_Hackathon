@@ -1,0 +1,243 @@
+.auth-center-container {
+  position: absolute;
+  top: 95px;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.auth-glass-card {
+  width: 520px;
+  max-width: 100%;
+  padding: 55px 48px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-radius: 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-glass-card h1 {
+  color: #0d2167;
+  font-size: 38px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+
+.auth-subtitle {
+  color: #4c5d8f;
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 36px;
+}
+
+.auth-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  text-align: left;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #101d58;
+}
+
+.auth-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.auth-input-wrapper input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 15px;
+  color: #0d2167;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.auth-input-wrapper input::placeholder {
+  color: rgba(13, 33, 103, 0.45);
+}
+
+.auth-input-wrapper input:focus {
+  border-color: rgba(37, 99, 255, 0.6);
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 0 0 3px rgba(37, 99, 255, 0.12);
+}
+
+.auth-input-wrapper input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-input-wrapper input[type="password"],
+.auth-input-wrapper input[type="text"].password-input {
+  padding-right: 44px;
+}
+
+.auth-eye-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  border-radius: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #0d2167;
+  font-size: 18px;
+  transition: color 0.2s;
+  padding: 0;
+}
+
+.auth-eye-btn:hover {
+  color: #2563ff;
+}
+
+.auth-error {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(239, 68, 68, 0.1);
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  text-align: center;
+}
+
+.auth-button {
+  width: 100%;
+  height: 56px;
+  margin-top: 8px;
+  padding: 0 24px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  color: #2563ff;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.auth-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.auth-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  margin-top: 28px;
+  font-size: 15px;
+  color: #4c5d8f;
+}
+
+.auth-footer button {
+  background: none;
+  border: none;
+  color: #2563ff;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+  font-size: inherit;
+}
+
+.auth-footer button:hover {
+  text-decoration: underline;
+}
+
+.auth-demo-hint {
+  margin-top: 18px;
+  font-size: 13px;
+  color: #58699b;
+}
+
+.auth-demo-hint strong {
+  color: #0d2167;
+  font-weight: 700;
+}
+
+/* ── Forgot Password link (inline with label) ── */
+.auth-field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.auth-field-row label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #101d58;
+}
+
+.auth-forgot-link {
+  background: none;
+  border: none;
+  color: #2563ff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.auth-forgot-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* ── Forgot Password success message ── */
+.auth-success {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(16, 185, 129, 0.1);
+  color: #065f46;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  text-align: center;
+}

@@ -1,0 +1,2181 @@
+/* ═══════════════════════════════════════════════════════════════════
+   AEGIS HEALTH — DASHBOARD STYLES
+
+   Contained within .page-shell (border-radius: 32px, overflow: hidden)
+   No external scrollbars. Internal scrolling only where needed.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Page Shell — fills .page-shell exactly, no overflow ──────── */
+.dashv2-page {
+  width: 100%;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-top: 95px;
+  background: transparent;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.dashv2-page .heart-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ── Loading ────────────────────────────────────────────────── */
+.dashv2-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 14px;
+}
+
+.dashv2-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(37,99,255,0.2);
+  border-top-color: #2563ff;
+  border-radius: 50%;
+  animation: dashv2-spin 0.8s linear infinite;
+}
+
+@keyframes dashv2-spin { to { transform: rotate(360deg); } }
+
+.dashv2-loading-text {
+  color: #262626;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ── Ambient Strip — fixed at top ──────────────────────────── */
+.dashv2-strip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0 6px;
+  position: relative;
+  z-index: 30;
+  flex-shrink: 0;
+}
+
+.dashv2-strip-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashv2-strip-greeting {
+  color: #0d2167;
+  font-weight: 600;
+  font-size: 17px;
+}
+
+.dashv2-strip-greeting strong { font-weight: 800; letter-spacing: -0.1px; }
+
+.dashv2-strip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dashv2-strip-msg {
+  font-size: 12px;
+  color: #262626;
+  font-weight: 500;
+  font-style: italic;
+}
+
+.dashv2-strip-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dashv2-strip-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashv2-strip-stat-label {
+  font-size: 10px;
+  color: #262626;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.dashv2-strip-stat-val {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+}
+
+.dashv2-strip-btn {
+  display: none;
+}
+
+.dashv2-strip-btn:hover { background: rgba(37,99,255,0.12); }
+
+.dashv2-strip-chat-btn {
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(37,99,255,0.3);
+  background: rgba(37,99,255,0.08);
+  color: #2563ff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashv2-strip-chat-btn:hover { background: rgba(37,99,255,0.16); }
+
+.dashv2-strip-chat-btn-active {
+  background: #2563ff;
+  color: #fff;
+  border-color: #2563ff;
+}
+
+.dashv2-strip-chat-btn-active:hover { background: #1d4ed8; }
+
+.dashv2-strip-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #2563ff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ── Main Body — fills remaining height, zero external scroll ─ */
+.dashv2-body {
+  display: grid;
+  grid-template-columns: 20fr 80fr;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0;
+  z-index: 10;
+  position: relative;
+  overflow: hidden;
+}
+
+.dashv2-body-with-sidebar {
+  grid-template-columns: 20fr 60fr 20fr;
+}
+
+.dashv2-body-with-chat {
+  grid-template-columns: 20fr 80fr;
+}
+
+.dashv2-body-with-sidebar.dashv2-body-with-chat {
+  grid-template-columns: 20fr 60fr 20fr;
+}
+
+/* ── Right Sidebar (Vitals Overview + Quick Signals, 2+ reports) ─ */
+.dashv2-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dashv2-vitals-overview-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px;
+}
+
+.dashv2-quicksig-card-tall {
+  flex: 0 0 auto;
+  min-height: 334px;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px 18px;
+}
+
+.dashv2-quicksig-card-tall .dashv2-card-header { margin-bottom: 8.5px; }
+.dashv2-quicksig-body-sidebar {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashv2-quicksig-body-sidebar .dashv2-quicksig-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.dashv2-quicksig-body-sidebar .dashv2-quicksig-section-top,
+.dashv2-quicksig-body-sidebar .dashv2-quicksig-section-bottom {
+  flex: 1 1 0;
+}
+
+.dashv2-quicksig-body-sidebar .dashv2-quicksig-section-mid {
+  flex: 1.2 1 0;
+}
+
+.dashv2-quicksig-body-sidebar .dashv2-quicksig-section + .dashv2-quicksig-section {
+  border-top: 1px solid rgba(255,255,255,0.25);
+}
+
+.dashv2-quicksig-card-tall .dashv2-quicksig-section-top {
+  padding: 16px 0 16px;
+}
+
+.dashv2-quicksig-card-tall .dashv2-quicksig-section-mid {
+  padding: 16px 0;
+}
+
+.dashv2-quicksig-card-tall .dashv2-quicksig-section-bottom {
+  padding: 16px 0 0;
+}
+
+.dashv2-quicksig-card-tall .dashv2-quicksig-label { font-size: 11.4px; margin-bottom: 7.2px; }
+.dashv2-quicksig-card-tall .dashv2-quicksig-symptom {
+  margin-bottom: 0;
+  font-size: 13px;
+  line-height: 1.56;
+  font-weight: 800;
+}
+.dashv2-quicksig-card-tall .dashv2-quicksig-grid {
+  margin: 0;
+  gap: 20px 0;
+  align-items: stretch;
+}
+.dashv2-quicksig-card-tall .dashv2-quicksig-grid > div {
+  padding: 0 20px;
+}
+.dashv2-quicksig-card-tall .dashv2-quicksig-grid > div + div {
+  border-left: 1.5px solid rgba(255,255,255,0.38);
+}
+.dashv2-quicksig-card-tall .dashv2-quicksig-val {
+  font-size: 20.36px;
+  line-height: 1.1;
+  letter-spacing: -0.1px;
+}
+.dashv2-quicksig-card-tall .dashv2-quicksig-foot {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.dashv2-quicksig-card-tall .dashv2-quicksig-foot .dashv2-quicksig-label {
+  font-size: 12.4px;
+}
+.dashv2-quicksig-card-tall .dashv2-quicksig-foot .dashv2-quicksig-val {
+  font-size: 22.36px;
+}
+
+.dashv2-sbvitals-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+  padding-top: 3px;
+}
+
+/* ── Left Rail ────────────────────────────────────────────── */
+.dashv2-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.dashv2-triage-card {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.dashv2-triage-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.dashv2-triage-icon { flex-shrink: 0; }
+
+.dashv2-triage-slogan {
+  font-size: 11.5px;
+  color: #262626;
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.35;
+}
+
+.dashv2-triage-label {
+  font-size: 13px;
+  color: #0d2167;
+  font-weight: 700;
+}
+
+.dashv2-triage-btn {
+  width: 100%;
+  padding: 9px;
+  border-radius: 11px;
+  border: none;
+  background: #2563ff;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashv2-triage-btn:hover { background: #1d4ed8; }
+
+.dashv2-history-card {
+  flex: 1 1 auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  min-height: 0;
+}
+
+.dashv2-history-viewall {
+  border: none;
+  background: transparent;
+  color: #2563ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  padding: 6px 2px 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dashv2-history-viewall:hover { text-decoration: underline; }
+
+.dashv2-history-label {
+  font-size: 10px;
+  color: #262626;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 700;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.dashv2-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8.5px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.dashv2-history-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 15px;
+  height: 62px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.dashv2-history-row:hover { background: rgba(255,255,255,0.2); }
+.dashv2-history-row-active {
+  background: rgba(255,255,255,0.22);
+  border-color: rgba(37,99,255,0.2);
+}
+
+.dashv2-history-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dashv2-history-file-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: rgba(37,99,255,0.1);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.dashv2-history-file-icon svg {
+  width: 18px;
+  height: 18px;
+  color: #2563ff;
+}
+
+.dashv2-history-text-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dashv2-history-name {
+  color: #0d2167;
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashv2-history-sub {
+  color: #262626;
+  font-size: 11.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.dashv2-history-sev-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.45px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.dashv2-history-preview {
+  margin: 2px 0 4px 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.15);
+  border-left: 2px solid rgba(37,99,255,0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.dashv2-history-preview-symptoms {
+  font-size: 10px;
+  color: #262626;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.dashv2-history-preview-meta {
+  font-size: 9px;
+  color: #262626;
+}
+
+.dashv2-history-preview-meta strong { color: #0d2167; }
+
+.dashv2-history-preview-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.dashv2-history-preview-btn {
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: none;
+  background: #2563ff;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashv2-history-preview-btn:hover { background: #1d4ed8; }
+
+.dashv2-history-preview-btn-outline {
+  padding: 4px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(37,99,255,0.25);
+  background: transparent;
+  color: #2563ff;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashv2-history-preview-btn-outline:hover { background: rgba(37,99,255,0.06); }
+
+.dashv2-support-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+
+.dashv2-support-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dashv2-support-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0d2167;
+}
+
+.dashv2-support-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: #262626;
+  line-height: 1.4;
+}
+
+.dashv2-support-btn {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(37,99,255,0.18);
+  background: rgba(37,99,255,0.1);
+  color: #2563ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashv2-support-btn:hover {
+  background: rgba(37,99,255,0.18);
+  transform: translateY(-1px);
+}
+
+/* ── Main Stage ────────────────────────────────────────────── */
+.dashv2-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  padding-right: 2px;
+}
+
+.dashv2-stage > .dashv2-vitals-row-card {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+}
+
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+/* ── Shared Glass Card ─────────────────────────────────────── */
+.dashv2-card {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.4);
+  border-radius: 16px;
+  padding: 16px 20px;
+  flex-shrink: 0;
+}
+
+.dashv2-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.dashv2-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0d2167;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.dashv2-card-title-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(37,99,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dashv2-card-badge {
+  font-size: 9px;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+/* ── Validation Banner ─────────────────────────────────────── */
+.dashv2-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 18px;
+  border-radius: 13px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid;
+  flex-shrink: 0;
+}
+
+.dashv2-banner-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.dashv2-banner-body { display: flex; flex-direction: column; gap: 2px; }
+.dashv2-banner-title { font-size: 13px; font-weight: 800; }
+.dashv2-banner-sub { font-size: 11px; line-height: 1.4; }
+
+.dashv2-banner-ok {
+  background: rgba(16,185,129,0.05);
+  border-color: rgba(16,185,129,0.2);
+}
+.dashv2-banner-ok .dashv2-banner-icon,
+.dashv2-banner-ok .dashv2-banner-title { color: #10b981; }
+.dashv2-banner-ok .dashv2-banner-sub { color: #262626; }
+
+.dashv2-banner-warning {
+  background: rgba(245,158,11,0.05);
+  border-color: rgba(245,158,11,0.2);
+}
+.dashv2-banner-warning .dashv2-banner-icon,
+.dashv2-banner-warning .dashv2-banner-title { color: #f59e0b; }
+.dashv2-banner-warning .dashv2-banner-sub { color: #262626; }
+
+.dashv2-banner-override {
+  background: rgba(239,68,68,0.06);
+  border-color: rgba(239,68,68,0.2);
+}
+.dashv2-banner-override .dashv2-banner-icon,
+.dashv2-banner-override .dashv2-banner-title { color: #ef4444; }
+.dashv2-banner-override .dashv2-banner-sub { color: #262626; }
+
+/* ── Analysis ──────────────────────────────────────────────── */
+.dashv2-analysis-section {
+  margin-bottom: 16px;
+}
+
+.dashv2-analysis-section:last-child { margin-bottom: 0; }
+
+.dashv2-analysis-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0d2167;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashv2-analysis-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.25);
+}
+
+.dashv2-analysis-paragraph {
+  font-size: 12px;
+  color: #262626;
+  line-height: 1.6;
+  margin: 0 0 8px 0;
+}
+
+.dashv2-analysis-paragraph:last-child { margin-bottom: 0; }
+.dashv2-analysis-paragraph strong { color: #0d2167; }
+
+/* ── Clinical Summary ── */
+.dashv2-analysis-card {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.dashv2-analysis-card .dashv2-card-header {
+  margin-bottom: 5px;
+}
+
+.dashv2-summary-grid {
+  display: grid;
+  grid-template-columns: 0.85fr 1.3fr 1fr;
+  gap: 0;
+  align-items: stretch;
+  padding-top: 0;
+}
+
+.dashv2-summary-grid > div {
+  padding: 0 34px;
+}
+.dashv2-summary-grid > div:first-child { padding-left: 0; padding-right: 34px; }
+.dashv2-summary-grid > div:last-child { padding-right: 0; padding-left: 34px; }
+.dashv2-summary-grid > div:not(:first-child) {
+  border-left: 1px solid rgba(148,163,184,0.28);
+}
+
+.dashv2-summary-grid > div:last-child {
+  display: flex;
+  flex-direction: column;
+}
+.dashv2-summary-grid > div:last-child .dashv2-summary-full-report-btn {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  align-self: flex-start;
+}
+
+.dashv2-summary-col-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #262626;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.dashv2-summary-severity-val {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.8px;
+  margin-bottom: 10px;
+}
+
+.dashv2-summary-confidence {
+  font-size: 12px;
+  color: #262626;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.dashv2-summary-confidence strong { color: #0d2167; font-weight: 800; }
+
+.dashv2-summary-reports-chip {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2563ff;
+  background: rgba(37,99,255,0.08);
+  padding: 4px 10px;
+  border-radius: 7px;
+}
+
+.dashv2-summary-takeaway-text {
+  font-size: 12.5px;
+  color: #262626;
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+}
+
+.dashv2-summary-why {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  background: rgba(37,99,255,0.06);
+  border: 1px solid rgba(37,99,255,0.12);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.dashv2-summary-why-icon {
+  color: #2563ff;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.dashv2-summary-why-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #2563ff;
+  margin-bottom: 2px;
+}
+
+.dashv2-summary-why-text {
+  font-size: 11px;
+  color: #262626;
+  line-height: 1.5;
+}
+
+.dashv2-summary-factors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dashv2-summary-factor-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #262626;
+  line-height: 1.5;
+}
+
+.dashv2-summary-factor-bullet {
+  color: #2563ff;
+  font-size: 14px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.dashv2-summary-factor-text {
+  min-width: 0;
+  flex: 1;
+}
+
+.dashv2-summary-factor-icon { font-size: 15px; flex-shrink: 0; }
+
+.dashv2-summary-full-report-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563ff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.dashv2-summary-full-report-btn:hover { color: #1d4ed8; }
+
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-analysis-card {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-analysis-card .dashv2-card-header {
+  margin-bottom: 7px;
+}
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-summary-col-label {
+  margin-bottom: 8px;
+}
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-summary-severity-val {
+  margin-bottom: 7px;
+}
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-summary-confidence {
+  margin-bottom: 7px;
+}
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-summary-takeaway-text {
+  line-height: 1.45;
+  margin-bottom: 6px;
+}
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-summary-why {
+  padding: 6px 12px;
+}
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-summary-factors-list {
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+/* ── Three-card row ────────────────────────────────────────── */
+.dashv2-triple-row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.dashv2-triple-row > .dashv2-card {
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashv2-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 12.5px;
+  color: #262626;
+}
+
+.dashv2-plan-list li {
+  position: relative;
+  padding-left: 14px;
+}
+
+.dashv2-plan-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #262626;
+}
+
+.dashv2-mini-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.dashv2-mini-card-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.dashv2-mini-card-title { font-size: 14px; font-weight: 800; color: #0d2167; }
+.dashv2-mini-card-arrow { color: #262626; font-size: 16px; flex-shrink: 0; cursor: pointer; }
+
+.dashv2-trend-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2563ff;
+  letter-spacing: 0.8px;
+  margin: 2px 0 4px;
+}
+
+.dashv2-trend-sub, .dashv2-risk-sub {
+  font-size: 11px;
+  color: #262626;
+  font-weight: 600;
+}
+
+.dashv2-risk-val {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  margin: 2px 0 4px;
+}
+
+/* ── Vitals Overview + Quick Signals ── */
+.dashv2-vitals-row-card {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  grid-template-rows: 1fr;
+  gap: 12px;
+  align-items: stretch;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+
+.dashv2-vitals-row-card > div:first-child {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.04), inset 0 1px 0 rgba(255,255,255,0.4);
+  border-radius: 16px;
+  padding: 20px 24px;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-card {
+  margin: 0;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-card .dashv2-quicksig-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.dashv2-vitals-row-card > div:first-child .dashv2-card-header,
+.dashv2-vitals-row-card .dashv2-quicksig-card .dashv2-card-header {
+  margin-bottom: 20px;
+}
+
+.dashv2-vitals-hrow {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
+  flex: 1 1 auto;
+  align-items: stretch;
+}
+
+.dashv2-vitals-row-card .dashv2-vitals-hrow {
+  flex: 0 1 auto;
+  margin-top: auto;
+}
+
+.dashv2-vitals-row-card > div:first-child::after {
+  content: "Generate a second report to see trend comparisons across reports.";
+  margin-top: auto;
+  padding-top: 16px;
+  text-align: center;
+  font-size: 11px;
+  color: #262626;
+}
+
+.dashv2-vital-hchip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0 14px;
+}
+
+.dashv2-vital-hchip::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: rgba(13,33,103,0.1);
+}
+
+.dashv2-vital-hchip:first-child::before {
+  display: none;
+}
+
+.dashv2-vital-hchip-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #262626;
+}
+
+.dashv2-vital-hchip-icon {
+  width: 29px;
+  height: 29px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14.5px;
+  flex-shrink: 0;
+}
+
+.dashv2-vital-hchip-val {
+  font-size: 24px;
+  font-weight: 900;
+  color: #0d2167;
+}
+
+.dashv2-vital-hchip-val span { font-size: 13px; font-weight: 600; color: #262626; }
+
+.dashv2-vital-hchip-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+
+/* ── Quick Signals ── */
+.dashv2-quicksig-label {
+  font-size: 11.5px;
+  color: #262626;
+  font-weight: 700;
+  text-transform: none;
+  margin-bottom: 5px;
+}
+
+.dashv2-quicksig-symptom {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0d2167;
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+
+.dashv2-quicksig-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 10px;
+}
+
+.dashv2-quicksig-val {
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.dashv2-quicksig-foot {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.25);
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-card .dashv2-card-header {
+  margin-bottom: 8.5px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-label {
+  font-size: 11.4px;
+  margin-bottom: 10px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-symptom {
+  margin-bottom: 0;
+  padding-bottom: 24px;
+  font-size: 13px;
+  line-height: 1.56;
+  font-weight: 800;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-symptom-tags {
+  padding-bottom: 24px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-grid {
+  gap: 20px 0;
+  align-items: stretch;
+  padding: 16px 0;
+  border-top: 1px solid rgba(255,255,255,0.25);
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-grid > div {
+  padding: 0 20px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-grid > div:first-child {
+  padding-left: 0;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-grid > div + div {
+  border-left: 1.5px solid rgba(255,255,255,0.38);
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-val {
+  font-size: 20.36px;
+  line-height: 1.1;
+  letter-spacing: -0.1px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-foot {
+  margin-top: 0;
+  padding-top: 16px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-foot .dashv2-quicksig-label {
+  font-size: 12.4px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-foot .dashv2-quicksig-val {
+  font-size: 22.36px;
+}
+
+/* ── Sidebar Vitals (2+ reports) ── */
+.dashv2-sbvitals-group-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #262626;
+  margin: 16px 0 10px;
+  flex-shrink: 0;
+}
+
+.dashv2-sbvitals-scroll > .dashv2-sbvitals-group-label:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+
+.dashv2-sbvitals-scroll > .dashv2-sbvitals-group-label {
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.28);
+}
+
+.dashv2-sbvitals-group-label:first-child { margin-top: 0; }
+
+.dashv2-sbvitals-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.dashv2-sbvitals-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 9px 4px;
+  border-radius: 12px;
+  background: transparent;
+  margin-bottom: 2px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.dashv2-sbvitals-row:hover { background: rgba(255,255,255,0.14); }
+
+.dashv2-sbvitals-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.dashv2-sbvitals-name { font-size: 12.5px; font-weight: 600; color: #262626; margin-bottom: 2px; }
+.dashv2-sbvitals-val { font-size: 15px; font-weight: 800; color: #0d2167; letter-spacing: -0.2px; }
+
+.dashv2-sbvitals-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.dashv2-sbvitals-viewall {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2563ff;
+  background: none;
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.28);
+  cursor: pointer;
+  padding: 12px 0 2px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.dashv2-sbvitals-viewall:hover { color: #1d4ed8; }
+
+/* ── SEVERITY & VITALS COMPARISON TABLE ── */
+.dashv2-comparison-grid {
+  width: 100%;
+  font-size: 12.5px;
+}
+
+.dashv2-comparison-grid-head,
+.dashv2-comparison-grid-row {
+  display: grid;
+  grid-template-columns: 1.14fr 1fr 1fr 0.92fr 0.92fr;
+  column-gap: 8px;
+  align-items: center;
+}
+
+.dashv2-comparison-grid-head {
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.3);
+}
+
+.dashv2-comp-head {
+  min-width: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #262626;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.dashv2-comp-head-param,
+.dashv2-comp-param {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+  min-width: 0;
+}
+
+.dashv2-comp-head-center,
+.dashv2-comp-prev,
+.dashv2-comp-cur,
+.dashv2-comp-change,
+.dashv2-comp-status-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-width: 0;
+}
+
+.dashv2-comp-head-current {
+  position: relative;
+}
+
+.dashv2-comp-head-current > span:last-child {
+  display: inline-block;
+}
+
+.dashv2-comp-head-flow {
+  position: absolute;
+  left: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #262626;
+  font-size: 10.5px;
+  line-height: 1;
+}
+
+.dashv2-comparison-grid-row {
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+}
+
+.dashv2-comparison-grid-row:last-child {
+  border-bottom: none;
+}
+
+.dashv2-comp-prev,
+.dashv2-comp-cur,
+.dashv2-comp-status-cell {
+  color: #262626;
+  font-weight: 500;
+}
+
+.dashv2-comp-param {
+  color: #0d2167;
+  font-weight: 600;
+}
+
+.dashv2-comp-change {
+  font-weight: 600;
+}
+
+.dashv2-comp-status-badge {
+  display: inline-block;
+}
+
+.dashv2-comparison-caption {
+  text-align: center;
+  font-size: 11px;
+  color: #262626;
+  margin-top: 8px;
+}
+
+/* ── Card Grid ─────────────────────────────────────────────── */
+.dashv2-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Severity Spotlight ────────────────────────────────────── */
+.dashv2-spotlight-compare-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 10px 0;
+}
+
+.dashv2-spotlight-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.12);
+  min-width: 70px;
+}
+
+.dashv2-spotlight-col-current {
+  border-width: 1px;
+  border-style: solid;
+}
+
+.dashv2-spotlight-col-label {
+  font-size: 9px;
+  color: #262626;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.dashv2-spotlight-col-val {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.dashv2-spotlight-col-date { font-size: 9px; color: #262626; }
+.dashv2-spotlight-arrow { font-size: 20px; flex-shrink: 0; }
+
+/* ── Vitals Grid ───────────────────────────────────────────── */
+.dashv2-vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 6px;
+}
+
+.dashv2-vital-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.12);
+  text-align: center;
+}
+
+.dashv2-vital-icon { font-size: 14px; }
+
+.dashv2-vital-name {
+  font-size: 8px;
+  color: #262626;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.dashv2-vital-current {
+  font-size: 15px;
+  font-weight: 900;
+  color: #0d2167;
+  line-height: 1;
+}
+
+.dashv2-vital-zscore { font-size: 9px; font-weight: 800; }
+
+.dashv2-vital-badge {
+  font-size: 7px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.dashv2-vital-samples { font-size: 7px; color: #262626; font-weight: 500; }
+
+/* ── Signal Chips ──────────────────────────────────────────── */
+.dashv2-signal-chips-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+}
+
+.dashv2-signal-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.1);
+}
+
+.dashv2-signal-chip-icon { font-size: 14px; }
+
+.dashv2-signal-chip-label {
+  font-size: 9px;
+  color: #262626;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dashv2-signal-chip-val { font-size: 12px; font-weight: 700; }
+
+/* ── Risk Factors ──────────────────────────────────────────── */
+.dashv2-risk-factors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashv2-risk-factor-row {
+  font-size: 11px;
+  color: #262626;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.08);
+}
+
+/* ── Severity Colors ───────────────────────────────────────── */
+.dashv2-sev-LOW    { color: #10b981; }
+.dashv2-sev-MODERATE { color: #f59e0b; }
+.dashv2-sev-HIGH   { color: #ef4444; }
+.dashv2-sev-CRITICAL { color: #991b1b; }
+
+.dashv2-sevbg-LOW    { background: rgba(16,185,129,0.15); }
+.dashv2-sevbg-MODERATE { background: rgba(245,158,11,0.16); }
+.dashv2-sevbg-HIGH   { background: rgba(239,68,68,0.15); }
+.dashv2-sevbg-CRITICAL { background: rgba(153,27,27,0.15); }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHAT PANEL
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashv2-chat-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: calc(20% - 6.4px);
+  z-index: 50;
+  animation: dashv2-slide-in 0.25s ease-out;
+}
+
+@keyframes dashv2-slide-in {
+  from { opacity: 0; transform: translateX(10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.dashv2-chat-panel-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  box-shadow: 0 12px 32px rgba(13,33,103,0.18), 0 2px 8px rgba(13,33,103,0.08);
+}
+
+.dashv2-chat-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.dashv2-chat-panel-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(37,99,255,0.1);
+  color: #2563ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.dashv2-chat-panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashv2-chat-panel-header-text { display: flex; flex-direction: column; }
+
+.dashv2-chat-panel-header-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0d2167;
+}
+
+.dashv2-chat-panel-header-sub { font-size: 10px; color: #262626; }
+
+.dashv2-chat-panel-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.2);
+  color: #262626;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.dashv2-chat-panel-close:hover {
+  background: rgba(239,68,68,0.1);
+  color: #ef4444;
+}
+
+.dashv2-chat-panel-messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+  margin-bottom: 10px;
+  min-height: 0;
+}
+
+.dashv2-chat-panel-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 88%;
+}
+
+.dashv2-chat-panel-msg-user { align-self: flex-end; }
+.dashv2-chat-panel-msg-assistant { align-self: flex-start; }
+
+.dashv2-chat-panel-bubble {
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.dashv2-chat-panel-msg-user .dashv2-chat-panel-bubble {
+  background: #2563ff;
+  color: #fff;
+  border-bottom-right-radius: 3px;
+}
+
+.dashv2-chat-panel-msg-assistant .dashv2-chat-panel-bubble {
+  background: rgba(255,255,255,0.3);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #262626;
+  border-bottom-left-radius: 3px;
+}
+
+.dashv2-chat-panel-sev-tag {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.dashv2-chat-panel-sev-unchanged { background: rgba(37,99,255,0.08); color: #2563ff; }
+.dashv2-chat-panel-sev-increased { background: rgba(239,68,68,0.08); color: #ef4444; }
+.dashv2-chat-panel-sev-decreased { background: rgba(16,185,129,0.08); color: #10b981; }
+
+.dashv2-chat-panel-placeholder {
+  text-align: center;
+  color: #262626;
+  font-size: 11px;
+  padding: 20px 8px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.dashv2-chat-panel-suggested {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.dashv2-chat-panel-suggested-btn {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid rgba(37,99,255,0.12);
+  background: rgba(255,255,255,0.25);
+  color: #2563ff;
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  /* Long chip text wraps onto multiple lines instead of being
+     clipped at the panel edge on narrow (mobile) viewports. */
+  white-space: normal;
+  text-align: left;
+  line-height: 1.4;
+  max-width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+}
+
+.dashv2-chat-panel-suggested-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dashv2-chat-panel-suggested-btn:hover { background: rgba(37,99,255,0.08); }
+
+.dashv2-chat-panel-input-row {
+  display: flex;
+  gap: 7px;
+  flex-shrink: 0;
+}
+
+.dashv2-chat-panel-input {
+  flex: 1;
+  border: 1px solid rgba(37,99,255,0.1);
+  border-radius: 10px;
+  padding: 8px 11px;
+  font-size: 11px;
+  color: #1f2937;
+  background: rgba(13,33,103,0.06);
+  resize: none;
+  outline: none;
+  font-family: inherit;
+}
+
+.dashv2-chat-panel-input:focus { border-color: #2563ff; }
+.dashv2-chat-panel-input:disabled { opacity: 0.4; cursor: not-allowed; }
+.dashv2-chat-panel-input::placeholder { color: #262626; opacity: 1; }
+
+.dashv2-chat-panel-send {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: #2563ff;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dashv2-chat-panel-send:hover:not(:disabled) { background: #1d4ed8; }
+.dashv2-chat-panel-send:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.dashv2-chat-panel-typing {
+  display: flex;
+  gap: 3px;
+  padding: 8px 12px;
+}
+
+.dashv2-chat-panel-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #a3b3cc;
+  animation: dashv2-chat-bounce 1.4s infinite ease-in-out both;
+}
+
+.dashv2-chat-panel-dot:nth-child(1) { animation-delay: -0.32s; }
+.dashv2-chat-panel-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes dashv2-chat-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+/* ═══════════════════════════════════════════════════════════════════
+   MIDDLE SECTION — THIRD ROW ONLY OVERRIDES
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashv2-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.dashv2-card-grid > .dashv2-card {
+  height: 100%;
+}
+
+.dashv2-actions-card,
+.dashv2-precautions-card {
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 18px 16px;
+}
+
+.dashv2-thirdrow-header {
+  margin-bottom: 9px;
+}
+
+.dashv2-thirdrow-card-title {
+  font-size: 14px;
+  gap: 9px;
+}
+
+.dashv2-thirdrow-card-title-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.dashv2-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.dashv2-actions-list-tight .dashv2-action-row,
+.dashv2-precaution-list-with-dividers .dashv2-precaution-row {
+  padding: 8px 0 8px;
+}
+
+.dashv2-precaution-list-with-dividers .dashv2-precaution-row {
+  position: relative;
+}
+
+.dashv2-precaution-list-with-dividers .dashv2-precaution-row + .dashv2-precaution-row {
+  border-top: none;
+}
+
+.dashv2-precaution-list-with-dividers .dashv2-precaution-row + .dashv2-precaution-row::before {
+  content: "";
+  position: absolute;
+  left: 36px;
+  right: 12px;
+  top: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.24);
+}
+
+.dashv2-action-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+}
+
+.dashv2-precaution-row {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+}
+
+.dashv2-action-index {
+  width: 19px;
+  height: 19px;
+  border-radius: 999px;
+  background: #2563ff;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  margin-top: 2px;
+}
+
+.dashv2-action-index-urgent {
+  background: #ef4444;
+}
+
+.dashv2-precaution-icon {
+  width: 28px;
+  min-width: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-size: 22px;
+  line-height: 1;
+  padding-top: 2px;
+}
+
+.dashv2-actions-card .dashv2-action-copy,
+.dashv2-precautions-card .dashv2-action-copy {
+  min-width: 0;
+  max-width: none;
+  padding-right: 10px;
+}
+
+.dashv2-action-title,
+.dashv2-action-detail {
+  line-height: 1.42;
+}
+
+.dashv2-action-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0d2167;
+  margin-bottom: 2px;
+  letter-spacing: 0;
+}
+
+.dashv2-action-detail {
+  color: #262626;
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.1px;
+  word-spacing: 0;
+  font-kerning: normal;
+  text-wrap: pretty;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dashv2-inline-note {
+  margin-top: auto;
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  background: rgba(37,99,255,0.05);
+  border: 1px solid rgba(37,99,255,0.12);
+  border-radius: 9px;
+  padding: 6px 10px;
+  font-size: 10.2px;
+  line-height: 1.3;
+  color: #2563ff;
+  font-weight: 600;
+}
+
+.clinical-picture-row {
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.clinical-picture-row .clinical-term {
+  font-weight: 700;
+  color: #0d2167;
+}
+
+.dashv2-precautions-card {
+  height: 250px;
+  overflow: hidden;
+}
+
+.dashv2-precautions-card .dashv2-actions-list-tight .dashv2-action-row {
+  padding: 8px 0;
+}
+
+.dashv2-precautions-card[data-row-count="4"] .dashv2-actions-list-tight .dashv2-action-row {
+  padding: 5px 0;
+}
+
+.dashv2-precautions-card[data-row-count="5"] .dashv2-actions-list-tight .dashv2-action-row {
+  padding: 3px 0;
+}
+
+.dashv2-precautions-card[data-row-count="6"] .dashv2-actions-list-tight .dashv2-action-row,
+.dashv2-precautions-card[data-row-count="7"] .dashv2-actions-list-tight .dashv2-action-row {
+  padding: 2px 0;
+}
+
+.dashv2-precaution-list-with-dividers .dashv2-precaution-row + .dashv2-precaution-row::before {
+  top: -1px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UNIFIED PILL / BADGE STYLING
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashv2-comp-status-badge,
+.dashv2-clinical-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  display: inline-block;
+  line-height: 1.3;
+}
+
+.dashv2-clinical-pill {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.4px !important;
+  padding: 4px 11px !important;
+  border-radius: 999px !important;
+  line-height: 1.3 !important;
+  display: inline-block !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POLISH PASS — pill softening, weight normalization, table cleanup
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashv2-sevbg-LOW      { background: rgba(16,185,129,0.10); }
+.dashv2-sevbg-MODERATE { background: rgba(245,158,11,0.10); }
+.dashv2-sevbg-HIGH     { background: rgba(239,68,68,0.10);  }
+.dashv2-sevbg-CRITICAL { background: rgba(153,27,27,0.10);  }
+
+.dashv2-clinical-pill {
+  padding: 4px 12px !important;
+  min-width: 40px !important;
+  text-align: center !important;
+}
+
+.dashv2-comparison-grid-row {
+  padding: 6px 0;
+}
+.dashv2-comparison-grid-row:last-child {
+  padding-bottom: 8px;
+}
+.dashv2-comparison-caption {
+  margin-top: 12px;
+}
+
+.dashv2-history-name {
+  font-weight: 500;
+}
+
+.dashv2-sbvitals-val {
+  font-weight: 600;
+}
+
+.dashv2-quicksig-symptom,
+.dashv2-vitals-row-card .dashv2-quicksig-symptom,
+.dashv2-quicksig-card-tall .dashv2-quicksig-symptom {
+  font-weight: 500;
+}
+
+.dashv2-quicksig-foot > div:not(.dashv2-quicksig-label) {
+  font-weight: 500 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POLISH PASS 2 — small refinements
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashv2-history-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.dashv2-history-sub {
+  font-size: 11px;
+}
+
+.dashv2-comparison-grid-row {
+  padding: 4px 0;
+}
+.dashv2-comparison-grid-row:last-child {
+  padding-bottom: 5px;
+}
+.dashv2-comparison-grid-head {
+  padding-bottom: 5px;
+}
+.dashv2-comparison-caption {
+  margin-top: 8px;
+  padding-bottom: 2px;
+}
+
+.dashv2-vital-hchip-val {
+  font-weight: 700;
+}
+.dashv2-vital-hchip-val span {
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POLISH PASS 3 — three tiny tweaks
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashv2-history-name {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.dashv2-comparison-grid-row {
+  padding: 4.1px 0;
+}
+.dashv2-comparison-grid-row:last-child {
+  padding-bottom: 5.1px;
+}
+
+.dashv2-vital-hchip-top {
+  font-weight: 700;
+  color: #0d2167;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POLISH PASS 4 — uniformity locks + table header/body gap
+   1. Report History name — force EXACT same computed size across all
+      rows via !important + locked line-height + zoom/transform reset.
+      Any perceived "shrinking" from top to bottom is eliminated.
+   2. Report History row height — locked min/max to 62px so no row
+      can be visually squished, which was contributing to the "smaller
+      further down" impression.
+   3. Comparison table — add breathing room ONLY between the header
+      row and the first data row (padding-bottom on head + padding-top
+      on first row). Data-row-to-data-row gaps stay at 4.1px. Card
+      grows slightly at the bottom to fit the caption cleanly.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* 1. Report History name — force uniform size everywhere */
+.dashv2-history-name {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  transform: none !important;
+  zoom: 1 !important;
+}
+
+.dashv2-history-sub {
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+}
+
+/* 2. Lock row height so nothing squishes */
+.dashv2-history-row {
+  min-height: 62px;
+  max-height: 62px;
+}
+
+/* 3. Comparison table — add gap between header row and first data row */
+.dashv2-comparison-grid-head {
+  padding-bottom: 14px;
+  margin-bottom: 2px;
+}
+
+.dashv2-comparison-grid-body .dashv2-comparison-grid-row:first-child {
+  padding-top: 6px;
+}

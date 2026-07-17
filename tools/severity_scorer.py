@@ -28,6 +28,11 @@ Resilience:
     evaluation continues with remaining rules. This is intentional —
     a bug in one rule suppresses only that rule rather than failing
     scoring entirely. The exception is logged for diagnosis.
+
+Logging note:
+    loguru reserves the kwarg `level` for setting log severity.
+    Structured fields must not use `level` as a keyword name. We use
+    `severity_level` instead when emitting the result's level.
 """
 
 from __future__ import annotations
@@ -59,12 +64,33 @@ from tools.tool_names import (
     TOOL_XRAY_PROCESSOR,
 )
 
+# FIX #10: text finding analyzer is a contributing tool for
+# synthesized text-finding rules. Import defensively — if the tool
+# constant is not defined yet in tool_names.py, fall back to a stable
+# literal so this module still imports cleanly.
+try:
+    from tools.tool_names import TOOL_TEXT_FINDING_ANALYZER
+except ImportError:  # pragma: no cover
+    TOOL_TEXT_FINDING_ANALYZER = "text_finding_analyzer"
+
+
+# FIX #8: severity calibrator applies multi-signal confidence and
+# escalation adjustments AFTER the base rule engine has determined
+# the initial (level, confidence). Import defensively — if the
+# module is missing, calibration is skipped and severity behaves
+# exactly as before this fix.
+try:
+    from tools.severity_calibrator import calibrate_severity
+    _CALIBRATOR_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _CALIBRATOR_AVAILABLE = False
+    calibrate_severity = None  # type: ignore
 
 # ── Rule constants ─────────────────────────────────────────────────
 
 RULE_CHEST_PAIN_AND_SOB        = "RULE_CHEST_PAIN_AND_SOB"
 RULE_CRITICAL_LAB_TROPONIN     = "RULE_CRITICAL_LAB_TROPONIN"
-RULE_CRITICAL_LAB_HAEMOGLOBIN = "RULE_CRITICAL_LAB_HAEMOGLOBIN"
+RULE_CRITICAL_LAB_HAEMOGLOBIN  = "RULE_CRITICAL_LAB_HAEMOGLOBIN"
 RULE_CRITICAL_LAB_POTASSIUM    = "RULE_CRITICAL_LAB_POTASSIUM"
 RULE_XRAY_PNEUMOTHORAX         = "RULE_XRAY_PNEUMOTHORAX"
 RULE_XRAY_PULMONARY_EDEMA      = "RULE_XRAY_PULMONARY_EDEMA"
@@ -76,6 +102,12 @@ RULE_XRAY_CONSOLIDATION        = "RULE_XRAY_CONSOLIDATION"
 RULE_PROLONGED_SYMPTOMS        = "RULE_PROLONGED_SYMPTOMS"
 RULE_MODERATE_DRUG_INTERACTION = "RULE_MODERATE_DRUG_INTERACTION"
 RULE_DEFAULT_LOW               = "RULE_DEFAULT_LOW"
+
+# ── FIX #10: Text finding rule prefix ──────────────────────────────
+# Rules synthesized from tools.text_finding_analyzer._TEXT_PATTERNS
+# use this prefix so downstream code (e.g. reason explanations) can
+# recognise them universally without hardcoding individual pattern IDs.
+RULE_TEXT_FINDING_PREFIX = "RULE_TEXT_FINDING_"
 
 
 # ── Internal structures ────────────────────────────────────────────
@@ -119,8 +151,8 @@ _CHEST_PAIN_TERMS: set[str] = {
 _SOB_TERMS: set[str] = {
     "shortness of breath",
     "sob",
-    "dyspnea",
     "dyspnoea",
+    "dyspnea",
     "breathlessness",
     "difficulty breathing",
 }
@@ -213,8 +245,8 @@ def _check_xray_pneumothorax(ctx: RuleContext) -> bool:
     return _check_xray_finding(ctx, "pneumothorax")
 
 
-def _check_xray_pulmonary_edema(ctx: RuleContext) -> bool:
-    """HIGH — Pulmonary edema present in X-ray findings."""
+def _check_xray_pulmonary_oedema(ctx: RuleContext) -> bool:
+    """HIGH — Pulmonary oedema present in X-ray findings."""
     return _check_xray_finding(ctx, "pulmonary edema")
 
 
@@ -281,6 +313,105 @@ def _check_moderate_drug(ctx: RuleContext) -> bool:
         for i in drug.interactions
     )
 
+# ── FIX #10: Text finding rule support ─────────────────────────────
+# Generic check function: reads state.text_finding_matched_patterns
+# (populated by tools.report_generator via tools.text_finding_analyzer)
+# and returns True if this rule's pattern_id was matched.
+#
+# Universal design: ONE check function serves ALL text-finding rules
+# via closure over pattern_id. No per-pattern conditionals anywhere
+# in this file — the pattern registry in text_finding_analyzer is the
+# single source of truth.
+
+def _make_text_finding_check(pattern_id: str) -> Callable[[RuleContext], bool]:
+    """Return a check function bound to a specific text-finding pattern id."""
+    def _check(ctx: RuleContext) -> bool:
+        matched = getattr(ctx.state, "text_finding_matched_patterns", None)
+        if not matched:
+            return False
+        try:
+            return pattern_id in matched
+        except Exception:
+            return False
+    _check.__name__ = f"_check_text_finding_{pattern_id}"
+    return _check
+
+
+# Confidence + priority + severity level per severity_class.
+# These are the ONLY biomarker/pattern-agnostic knobs. Adjusting a
+# value here changes behavior for ALL text-finding patterns of that
+# severity class — single point of tuning.
+_TEXT_FINDING_RULE_PROFILE: dict[str, dict] = {
+    "critical":   {"level": "HIGH",   "priority": 175, "confidence": 0.94},
+    "urgent":     {"level": "HIGH",   "priority": 145, "confidence": 0.90},
+    "concerning": {"level": "MEDIUM", "priority": 85,  "confidence": 0.82},
+}
+
+
+def _synthesize_text_finding_rules() -> List["Rule"]:
+    """
+    Build Rule objects from the text_finding_analyzer pattern registry.
+
+    Only patterns whose severity_class is 'concerning', 'urgent', or
+    'critical' produce rules. Reassuring/informational patterns are
+    intentionally excluded — they do not warrant escalation.
+
+    Import is deferred to avoid a circular import between
+    severity_scorer and text_finding_analyzer.
+
+    Fail-safe: if the analyzer module is unavailable for any reason
+    (missing file, import error), returns an empty list so the base
+    13 rules continue to function exactly as before.
+    """
+    try:
+        from tools.text_finding_analyzer import get_registered_patterns
+        patterns = get_registered_patterns()
+    except Exception:
+        logger.exception(
+            "severity_scorer · text_finding_analyzer unavailable · "
+            "text-finding rules disabled for this run"
+        )
+        return []
+
+    synthesized: List[Rule] = []
+    for p in patterns:
+        cls = str(p.get("severity_class") or "").lower()
+        profile = _TEXT_FINDING_RULE_PROFILE.get(cls)
+        if not profile:
+            continue
+
+        pid = str(p.get("id") or "").strip()
+        if not pid:
+            continue
+
+        # Human-readable reason: prefer the pattern's observation text,
+        # falling back to a generic description if the pattern is silent
+        # (e.g., reassuring patterns — which we already excluded above).
+        reason = (
+            str(p.get("observation") or "").strip()
+            or f"Text finding pattern '{pid}' matched on peripheral smear or clinical impression."
+        )
+
+        synthesized.append(
+            Rule(
+                constant          = f"{RULE_TEXT_FINDING_PREFIX}{pid.upper()}",
+                priority          = int(profile["priority"]),
+                level             = profile["level"],
+                check_fn          = _make_text_finding_check(pid),
+                reason            = reason,
+                contributing_tool = TOOL_TEXT_FINDING_ANALYZER,
+                rule_confidence   = float(profile["confidence"]),
+            )
+        )
+
+    if synthesized:
+        logger.info(
+            "severity_scorer · synthesized text-finding rules",
+            count=len(synthesized),
+        )
+
+    return synthesized
+
 
 # ── Rule table ─────────────────────────────────────────────────────
 # Sorted once at module load by priority descending.
@@ -338,8 +469,8 @@ _RULES: List[Rule] = sorted(
             constant          = RULE_XRAY_PULMONARY_EDEMA,
             priority          = 140,
             level             = "HIGH",
-            check_fn          = _check_xray_pulmonary_edema,
-            reason            = "Pulmonary edema detected on X-ray.",
+            check_fn          = _check_xray_pulmonary_oedema,
+            reason            = "Pulmonary oedema detected on X-ray.",
             contributing_tool = TOOL_XRAY_PROCESSOR,
             rule_confidence   = 0.95,
         ),
@@ -406,6 +537,13 @@ _RULES: List[Rule] = sorted(
             contributing_tool = TOOL_DRUG_INTERACTION_CHECKER,
             rule_confidence   = 0.78,
         ),
+        # ── FIX #10: Text-finding rules synthesized from the pattern
+        # registry in tools.text_finding_analyzer. Unpacked here so
+        # they participate in the same priority-sorted evaluation
+        # pipeline as the base rules. Any pattern added to that
+        # registry with severity_class ∈ {concerning, urgent, critical}
+        # is automatically included — no code change here required.
+        *_synthesize_text_finding_rules(),
     ],
     key=lambda r: r.priority,
     reverse=True,
@@ -476,21 +614,58 @@ class SeverityScorer:
             ):
                 contributing_tools.append(r.contributing_tool)
 
+                # ── Baseline values from the base rule engine ─────────────
+        base_level = highest.level
+        base_confidence = highest.rule_confidence
+        base_reasons = [r.reason for r in fired]
+
+        # ── FIX #8: multi-signal severity calibration ─────────────
+        # Apply confidence adjustments and (optionally) escalate the
+        # severity level based on symptom-lab correlation, corroborating
+        # rule clusters, text-finding matches, and diagnostic ambiguity.
+        # Fail-safe: if the calibrator is unavailable or errors, baseline
+        # values are used and severity behaves exactly as before FIX #8.
+        final_level = base_level
+        final_confidence = base_confidence
+        final_reasons = list(base_reasons)
+
+        if _CALIBRATOR_AVAILABLE and calibrate_severity is not None:
+            try:
+                calibrated = calibrate_severity(
+                    state=state,
+                    fired_rules=fired,
+                    current_level=base_level,
+                    current_confidence=base_confidence,
+                    current_reasons=base_reasons,
+                )
+                final_level = calibrated.get("level", base_level)
+                final_confidence = calibrated.get("confidence", base_confidence)
+                final_reasons = calibrated.get("reasons", base_reasons)
+            except Exception:
+                logger.exception(
+                    "severity_scorer · calibration raised; using baseline values",
+                    session_id=getattr(state, "session_id", None),
+                )
+
         result = SeverityResult(
-            level                 = highest.level,
-            confidence            = highest.rule_confidence,
+            level                 = final_level,
+            confidence            = final_confidence,
             triggered_rules       = [r.constant for r in fired],
             highest_priority_rule = highest.constant,
-            reasons               = [r.reason for r in fired],
+            reasons               = final_reasons,
             contributing_tools    = contributing_tools,
         )
 
+        # NOTE: `level` is reserved by loguru — use `severity_level`.
         logger.info(
             "severity_scorer · complete",
-            level                 = result.level,
-            highest_priority_rule = result.highest_priority_rule,
-            triggered_count       = len(fired),
-            session_id            = getattr(state, "session_id", None),
+            severity_level=result.level,
+            highest_priority_rule=result.highest_priority_rule,
+            triggered_count=len(fired),
+            base_level=base_level,
+            base_confidence=round(float(base_confidence), 3),
+            final_confidence=round(float(final_confidence), 3),
+            session_id=getattr(state, "session_id", None),
         )
 
         return result

@@ -1,0 +1,113 @@
+.voice-recorder-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-rec-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(37, 99, 255, 0.3);
+  background: rgba(255, 255, 255, 0.6);
+  color: #2563ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.voice-rec-btn:hover:not(:disabled) {
+  background: #2563ff;
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.voice-rec-btn.recording {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+  animation: rec-pulse 1.2s infinite;
+}
+
+.voice-rec-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.5); }
+  50%      { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+
+.rec-stop-square {
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-radius: 2px;
+}
+
+.rec-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(37, 99, 255, 0.25);
+  border-top-color: #2563ff;
+  border-radius: 50%;
+  animation: rec-spin 0.7s linear infinite;
+}
+
+@keyframes rec-spin {
+  to { transform: rotate(360deg); }
+}
+
+.status-text {
+  font-size: 12px;
+  color: #7182b1;
+  font-weight: 500;
+}
+
+/* ─── Waveform overlay (rendered by parent inside textarea wrapper) ─── */
+.vr-waveform-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 60px 0 50px;
+  z-index: 4;
+}
+
+.vr-waveform-bars {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 45%;
+  gap: 4px;
+}
+
+.vr-wave-bar {
+  flex: 1;
+  max-width: 3px;
+  min-width: 2px;
+  background: rgba(37, 99, 255, 0.55);
+  border-radius: 4px;
+  transform-origin: center;
+  animation-name: vr-wave-pulse;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+}
+
+@keyframes vr-wave-pulse {
+  0%, 100% {
+    transform: scaleY(0.25);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 0.85;
+  }
+}

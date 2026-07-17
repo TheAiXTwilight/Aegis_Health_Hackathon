@@ -1,13 +1,27 @@
 """
 Public exports for the Aegis Health tools package.
+
+Phase 2.5 additions:
+    ExecutionPlanner  — SLM-powered planning step (Step -1)
+    PlanValidator     — synchronous RAG safety-override validator
+    RuleValidator     — three-state narrative vs deterministic comparison (Step 9)
+
+planner_constants is NOT exported here.
+It is a configuration module, not a tool.
+Import it directly where needed:
+
+    from tools.planner_constants import RAG_FORCE_SYMPTOM_TERMS
 """
 
 from .base import BaseTool
 from .confidence import calculate_confidence
 from .drug_checker import DrugInteractionChecker
+from .execution_planner import ExecutionPlanner
 from .lab_report_parser import LabReportParser
 from .medical_rag_search import MedicalRAGSearch
+from .plan_validator import PlanValidator
 from .report_generator import ReportGenerator
+from .rule_validator import RuleValidator
 from .severity_scorer import (
     ALL_RULE_CONSTANTS,
     RULE_ABNORMAL_LAB_ANY,
@@ -30,9 +44,11 @@ from .severity_scorer import (
 from .symptom_extractor import SymptomExtractor
 from .tool_names import (
     TOOL_DRUG_INTERACTION_CHECKER,
+    TOOL_EXECUTION_PLANNER,
     TOOL_LAB_REPORT_PARSER,
     TOOL_MEDICAL_RAG_SEARCH,
     TOOL_REPORT_GENERATOR,
+    TOOL_RULE_VALIDATOR,
     TOOL_SEVERITY_SCORER,
     TOOL_SYMPTOM_EXTRACTOR,
     TOOL_VOICE_TRANSCRIBER,
@@ -45,9 +61,12 @@ __all__ = [
     "BaseTool",
     "calculate_confidence",
     "DrugInteractionChecker",
+    "ExecutionPlanner",
     "LabReportParser",
     "MedicalRAGSearch",
+    "PlanValidator",
     "ReportGenerator",
+    "RuleValidator",
     "SeverityScorer",
     "SymptomExtractor",
     "VoiceTranscriber",
@@ -69,6 +88,7 @@ __all__ = [
     "RULE_MODERATE_DRUG_INTERACTION",
     "RULE_DEFAULT_LOW",
     # Tool name constants
+    "TOOL_EXECUTION_PLANNER",
     "TOOL_VOICE_TRANSCRIBER",
     "TOOL_SYMPTOM_EXTRACTOR",
     "TOOL_LAB_REPORT_PARSER",
@@ -77,4 +97,5 @@ __all__ = [
     "TOOL_DRUG_INTERACTION_CHECKER",
     "TOOL_SEVERITY_SCORER",
     "TOOL_REPORT_GENERATOR",
+    "TOOL_RULE_VALIDATOR",
 ]

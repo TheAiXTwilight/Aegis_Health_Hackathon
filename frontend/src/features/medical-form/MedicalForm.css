@@ -1,0 +1,582 @@
+/* ========================================================================
+   MedicalForm.css — AegisHealth Medical Form Page Styles
+   ======================================================================== */
+
+/* ── Form centering container ──────────────────────────────────── */
+.form-center-container {
+  position: absolute;
+  top: 95px;
+  bottom: 80px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  padding: 10px 24px;
+}
+
+/* ── Master card ────────────────────────────────────────────────── */
+.medical-form-card {
+  width: 900px;
+  max-width: 100%;
+  padding: 45px 50px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08),
+              inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-radius: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.medical-form-card h2 {
+  color: #0d2167;
+  font-size: 38px;
+  font-weight: 800;
+  margin-bottom: 35px;
+}
+
+/* ── Accordion ──────────────────────────────────────────────────── */
+.accordion-wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 35px;
+}
+
+.accordion-section {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  overflow: hidden;
+  transition: all 0.25s ease-in-out;
+}
+
+.accordion-section.open {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(37, 99, 255, 0.25);
+}
+
+.accordion-header {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.blue-badge { background: rgba(37, 99, 255, 0.12); color: #2563ff; }
+.pink-badge { background: rgba(239, 68, 68, 0.11); color: #ef4444; }
+.navy-badge { background: rgba(30, 58, 138, 0.11); color: #1e3a8a; }
+.purple-badge { background: rgba(147, 51, 234, 0.11); color: #9333ea; }
+
+.accordion-header h3 {
+  color: #0d2167;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.optional {
+  color: #6373a1;
+  font-size: 14px;
+  font-weight: 500;
+  margin-left: 4px;
+  font-style: italic;
+}
+
+.required { color: #ef4444; }
+
+.toggle-indicator {
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563ff;
+  font-size: 18px;
+}
+
+.accordion-content {
+  padding: 10px 24px 28px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.animate-slide-down { animation: slideDown 0.2s ease-out; }
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Form grid and groups ──────────────────────────────────────── */
+.medical-form-card .form-grid {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  width: 100%;
+}
+
+.medical-form-card .input-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.medical-form-card .input-group label {
+  color: #0d2167;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.margin-bottom-20 { margin-bottom: 20px; }
+
+.input-with-icon {
+  position: relative;
+  width: 100%;
+}
+
+.field-icon {
+  position: absolute;
+  left: 16px;
+  top: calc(50% + 1px);
+  transform: translateY(-50%);
+  font-size: 15px;
+  opacity: 0.4;
+}
+
+/* ── Text inputs ────────────────────────────────────────────────── */
+.medical-form-card .input-with-icon input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px 0 46px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  color: #0d2167;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.medical-form-card .input-with-icon input:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #2563ff;
+}
+
+/* ── Textarea ───────────────────────────────────────────────────── */
+.glass-textarea {
+  width: 100%;
+  height: 90px;
+  padding: 14px 16px 14px 46px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  color: #0d2167;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  resize: none;
+}
+
+.glass-textarea:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #2563ff;
+}
+
+/* ── Radio buttons ──────────────────────────────────────────────── */
+.medical-form-card .radio-group {
+  display: flex;
+  gap: 14px;
+  height: 48px;
+}
+
+.medical-form-card .radio-label {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  color: #0d2167;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.medical-form-card .radio-label input { display: none; }
+
+.medical-form-card .radio-label.selected {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.medical-form-card .custom-radio {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(37, 99, 255, 0.4);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.medical-form-card .radio-label input:checked + .custom-radio {
+  border-color: #2563ff;
+  background: #2563ff;
+  box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+/* ── Select / dropdown ──────────────────────────────────────────── */
+.custom-select-wrapper { position: relative; }
+
+.glass-select {
+  width: 100%;
+  height: 48px;
+  padding: 0 40px 0 46px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  color: #0d2167;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.glass-select:focus { background: rgba(255, 255, 255, 0.2); }
+
+.select-arrow {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%) rotate(180deg);
+  font-size: 12px;
+  color: #2563ff;
+  pointer-events: none;
+}
+
+/* ── File dropzone ──────────────────────────────────────────────── */
+.file-upload-row { width: 100%; margin-top: 5px; }
+
+.glass-file-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 100%;
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.glass-file-dropzone:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: #2563ff;
+}
+
+.glass-file-dropzone input[type="file"] { display: none; }
+
+.upload-cloud-icon { font-size: 24px; color: #2563ff; }
+.upload-text-group { display: flex; flex-direction: column; text-align: left; }
+.primary-upload-text { color: #0d2167; font-size: 14px; font-weight: 600; }
+.secondary-upload-text { color: #6373a1; font-size: 12px; }
+
+/* ── Submit button ──────────────────────────────────────────────── */
+.form-submit-btn {
+  width: 240px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px) saturate(1.3);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06),
+              inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-radius: 18px;
+  color: #2563ff;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.form-submit-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.form-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* ── Medical history auto-textarea + voice corner ───────────────── */
+.medical-history-input-wrap {
+  position: relative;
+  --medical-history-icon-row-top: 7px;
+  --medical-history-icon-row-size: 32px;
+}
+
+.medical-history-auto-textarea {
+  min-height: 46px !important;
+  height: 46px !important;
+  max-height: 220px;
+  overflow-y: hidden;
+  resize: none;
+  padding-right: 54px;
+  line-height: 1.5;
+  padding-top: 12px !important;
+  padding-bottom: 10px !important;
+}
+
+.medical-history-input-wrap.is-recording .medical-history-auto-textarea {
+  color: transparent !important;
+  caret-color: transparent;
+  background: transparent !important;
+}
+
+.medical-history-input-wrap.is-recording .medical-history-auto-textarea::placeholder {
+  color: transparent !important;
+}
+
+.medical-history-input-wrap.is-recording .field-icon {
+  opacity: 0 !important;
+}
+
+.medical-history-input-wrap .field-icon.textarea-icon {
+  top: var(--medical-history-icon-row-top);
+  height: var(--medical-history-icon-row-size);
+  display: flex;
+  align-items: center;
+  transform: none;
+}
+
+.medical-history-input-wrap .field-icon.textarea-icon svg {
+  display: block;
+}
+
+.medical-history-voice-corner {
+  position: absolute;
+  right: 14px;
+  top: var(--medical-history-icon-row-top);
+  height: var(--medical-history-icon-row-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.medical-history-voice-corner .voice-recorder-wrapper {
+  gap: 0;
+}
+
+.medical-history-voice-corner .status-text {
+  display: none;
+}
+
+.medical-history-voice-corner .voice-rec-btn {
+  width: var(--medical-history-icon-row-size);
+  height: var(--medical-history-icon-row-size);
+  border: none;
+  background: transparent;
+  color: #7182b1;
+  box-shadow: none;
+  opacity: 0.75;
+}
+
+.medical-history-voice-corner .voice-rec-btn:hover:not(:disabled) {
+  background: rgba(37, 99, 255, 0.08);
+  color: #2563ff;
+  transform: none;
+  opacity: 1;
+}
+
+.medical-history-voice-corner .voice-rec-btn.recording {
+  background: #ef4444;
+  color: #ffffff;
+  opacity: 1;
+}
+
+/* ========================================================================
+   NEW: Backend Integration Styles
+   ======================================================================== */
+
+/* ── Error banner ──────────────────────────────────────────────── */
+.error-banner {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 14px;
+  color: #ef4444;
+  font-size: 14px;
+  font-weight: 600;
+  animation: slideDown 0.2s ease-out;
+}
+
+.error-dismiss {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  opacity: 0.6;
+}
+
+.error-dismiss:hover { opacity: 1; }
+
+/* ── Submit spinner ─────────────────────────────────────────────── */
+.submit-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(37, 99, 255, 0.25);
+  border-top-color: #2563ff;
+  border-radius: 50%;
+  animation: rec-spin 0.7s linear infinite;
+}
+
+@keyframes rec-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── X-ray findings checklist chips ────────────────────────────── */
+.findings-checklist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.finding-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
+  color: #425894;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.finding-chip input { display: none; }
+
+.finding-chip:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.finding-chip.selected {
+  background: rgba(168, 85, 247, 0.12);
+  border-color: #a855f7;
+  color: #7c3aed;
+}
+
+/* ── Failed pipeline node state (used in ReportPage too) ────────── */
+.pipeline-node.failed {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.pipeline-line.failed { background: #ef4444; }
+
+.status-label.failed { color: #ef4444; }
+
+/* ========================================================================
+   NEW: Multiple File Badge Styles
+   ======================================================================== */
+
+.selected-files-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 4px 0;
+}
+
+.selected-files-container-top {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.file-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(37, 99, 255, 0.12);
+  border: 1px solid rgba(37, 99, 255, 0.25);
+  color: #0d2167;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.file-name {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.remove-file-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+  transition: all 0.15s ease;
+}
+
+.remove-file-btn:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}

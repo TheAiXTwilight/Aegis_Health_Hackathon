@@ -1,0 +1,282 @@
+/* frontend/src/features/report/ChatPanel.css */
+
+.chat-panel {
+  width: 1120px;
+  max-width: 95vw;
+
+  /* Layout containment fix ─────────────────────────────────────
+     min-width:0 lets the panel shrink inside a narrow flex/grid
+     parent instead of overflowing it. Without this, long suggested
+     question chips could push the panel's flex container wider
+     than the parent, causing chips to appear outside the panel on
+     the left. box-sizing keeps padding + border inside the panel
+     width so the visible rounded corners aren't overrun. */
+  min-width: 0;
+  box-sizing: border-box;
+
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-radius: 24px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 420px;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  box-sizing: border-box;
+}
+
+.chat-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #0d2167;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.chat-turn-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(37, 99, 255, 0.12);
+  color: #2563ff;
+}
+
+.chat-turn-badge.chat-turn-low {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 80px;
+  max-height: 220px;
+  box-sizing: border-box;
+}
+
+.chat-placeholder {
+  color: #7182b1;
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.chat-msg {
+  display: flex;
+}
+
+.chat-msg.user {
+  justify-content: flex-end;
+}
+
+.chat-msg.assistant {
+  justify-content: flex-start;
+}
+
+.chat-msg-bubble {
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1f2937;
+  /* Preserve paragraph breaks in multi-part answers ("\n\n") and
+     wrap long words rather than letting them overflow the bubble. */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+}
+
+.chat-msg.user .chat-msg-bubble {
+  background: #2563ff;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-msg.assistant .chat-msg-bubble {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom-left-radius: 4px;
+}
+
+.chat-typing {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 14px 18px;
+}
+
+.chat-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a3b3cc;
+  animation: chat-bounce 1.4s infinite ease-in-out both;
+}
+
+.chat-dot:nth-child(1) { animation-delay: -0.32s; }
+.chat-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes chat-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+.chat-severity-tag {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.chat-sev-increased {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.chat-sev-decreased {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+/* ── Suggested chip container ─────────────────────────────────
+   The overflow bug (chips appearing outside the panel on the left)
+   was caused by long chip text combined with a flex container that
+   had no explicit width containment. Fixed by:
+     • min-width:0 + max-width:100% on the container so it never
+       expands past the panel width regardless of chip content
+     • box-sizing:border-box so padding is included in width
+     • overflow:hidden as a defense-in-depth so any residual
+       overflow gets clipped rather than appearing outside the
+       panel's rounded corners */
+.chat-suggested {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 18px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.chat-suggested-btn {
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(37, 99, 255, 0.2);
+  background: rgba(255, 255, 255, 0.5);
+  color: #2563ff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  /* Long questions wrap onto multiple lines instead of being
+     truncated with an ellipsis OR overflowing the panel edge.
+     Left-aligned so multi-line text reads naturally. */
+  white-space: normal;
+  text-align: left;
+  line-height: 1.4;
+
+  /* Width containment ────────────────────────────────────────
+     max-width:100% caps each chip at the container width so a
+     single very long chip can't push others off-screen.
+     min-width:0 + flex:0 1 auto lets chips shrink when needed
+     instead of forcing overflow. */
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+
+  /* Break inside long words if needed to stay inside the container */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-sizing: border-box;
+}
+
+.chat-suggested-btn:hover:not(:disabled) {
+  background: rgba(37, 99, 255, 0.1);
+}
+
+.chat-suggested-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 18px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+  box-sizing: border-box;
+}
+
+.chat-input {
+  flex: 1;
+  /* min-width:0 lets the textarea shrink to fit the row when the
+     send button and padding would otherwise force it to overflow */
+  min-width: 0;
+  border: 1px solid rgba(37, 99, 255, 0.15);
+  border-radius: 14px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #1f2937;
+  background: rgba(255, 255, 255, 0.6);
+  resize: none;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.chat-input:focus {
+  border-color: #2563ff;
+}
+
+.chat-input:disabled {
+  opacity: 0.5;
+}
+
+.chat-send-btn {
+  width: 38px;
+  height: 38px;
+  /* flex-shrink:0 keeps the send button its exact circular size
+     even when the input next to it is very narrow */
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: none;
+  background: #2563ff;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.chat-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
