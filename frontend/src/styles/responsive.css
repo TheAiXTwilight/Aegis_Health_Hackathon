@@ -3347,7 +3347,7 @@
   }
 
   .dashv2-comparison-grid-row {
-    padding: 4.7px 0 !important; /* EXACTLY 4.7px padding gap! */
+    padding: 4px 0 !important; /* EXACTLY 4.7px padding gap! */
     border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   }
 
