@@ -82,6 +82,9 @@ The app service communicates with the Ollama service via:
 This is set in docker-compose.yml. Do not change it unless the
 Ollama service name changes.
 
+Both ExecutionPlanner (non-streaming, temperature=0.0) and
+ReportGenerator (streaming, temperature=0.2) use this base URL.
+
 
 ## Ports
 
@@ -111,14 +114,28 @@ as static files in the same container — no separate frontend container
 required.
 
 
-## EasyOCR ARM64 Validation
+## EasyOCR ARM64 Validation (Phase 3 — Required before Commit 4 production use)
 
-EasyOCR must be validated on ARM64 before Week 2 implementation.
+EasyOCR is used by LabReportParser as the third-tier fallback for
+scanned PDFs. It is only loaded when AEGIS_OCR=1 (or "true" / "yes")
+is set in the environment. Digital PDFs do not trigger EasyOCR.
+
+Validate EasyOCR on ARM64 before enabling AEGIS_OCR in production:
+
+    AEGIS_OCR=1 python -c "
+    import easyocr
+    reader = easyocr.Reader(['en'], gpu=False, verbose=True)
+    print('EasyOCR ARM64: OK')
+    "
 
 If EasyOCR fails on ARM64:
-    Switch to pytesseract
-    Redefine Scenario B fixture accordingly
-    Document the decision in this file
+    1. Switch to pytesseract
+    2. Replace _extract_via_easyocr() in tools/lab_report_parser.py
+       with a pytesseract implementation (same signature: Path → str | None)
+    3. Update the pytesseract entry in docs/requirements.md
+    4. Update this file with the outcome and date
+
+EasyOCR ARM64 status: NOT YET VALIDATED
 
 
 ## GPU Detection
@@ -131,6 +148,36 @@ The health endpoint detects GPU presence via:
 torch is never imported for GPU detection.
 
 
+## Phase 2.5 Notes
+
+ExecutionPlanner, PlanValidator, and RuleValidator add no new
+system dependencies. They use httpx (already present), stdlib
+modules (json, re), and pydantic (already present).
+
+ExecutionPlanner makes one additional non-streaming Ollama call
+per pipeline run. This call uses temperature=0.0 and num_predict=128,
+making it fast and low-latency relative to the main ReportGenerator call.
+
+Memory impact of Phase 2.5 components is negligible — no new models
+are loaded, no significant memory allocations.
+
+
+## Phase 3 Notes
+
+Commit 4 (LabReportParser) introduces no new system packages beyond
+what Phase 3 Commit 1 already required. PyMuPDF, pdfminer.six, and
+EasyOCR are all listed in docs/requirements.md.
+
+LabReportParser extraction waterfall on Jetson:
+    PyMuPDF and pdfminer.six run on CPU — no GPU required.
+    EasyOCR (when enabled) runs with gpu=False — CPU-only on Jetson.
+    Memory peak estimate for EasyOCR active: 3.4–4.1 GB (see docs/memory_profile.md).
+
+AEGIS_OCR should remain unset in standard Jetson deployments unless
+the input includes scanned (image-only) PDFs. Digital lab reports
+extracted by PyMuPDF or pdfminer.six do not need OCR.
+
+
 ## Known Issues
 
 Python 3.10 default on JetPack 6
@@ -138,7 +185,8 @@ Python 3.10 default on JetPack 6
     Install Python 3.11 explicitly as described above.
 
 EasyOCR ARM64 compatibility
-    Not yet validated. Validate in Week 1.
+    Not yet validated. Validate before enabling AEGIS_OCR=1 in production.
+    See EasyOCR ARM64 Validation section above.
 
 Knowledge base not yet built
     TriageReport.knowledge_base_version and knowledge_base_date
@@ -146,4 +194,4 @@ Knowledge base not yet built
 
 Frontend not yet built
     Backend API is stable and fully functional via curl, Postman,
-    or any HTTP client. React frontend lands in Week 5+.
+    or any HTTP client. React frontend lands in Phase 5.

@@ -10,11 +10,38 @@ All figures below are estimates from the spec — not yet verified.
 
 State                                   Estimated Peak
 Idle                                    2.2 – 2.6 GB
-VoiceTranscriber active                 2.4 – 2.8 GB
+VoiceTranscriber active                 2.3 – 2.7 GB
 LabReportParser (digital PDF)           2.3 – 2.7 GB
 LabReportParser (EasyOCR active)        3.4 – 4.1 GB
-XRayProcessor active                    2.2 – 2.6 GB
+XRayProcessor active                    TBD — measure after Commit 6
 ReportGenerator (LLM active)            TBD — measure Week 1
+
+Phase 2.5 additions (all negligible):
+    ExecutionPlanner: one non-streaming HTTP call — no model loaded
+                      locally, no significant memory allocation
+    PlanValidator:    pure Python dict operations — negligible
+    RuleValidator:    regex over a string — negligible
+
+Phase 3 Commit 4 — LabReportParser:
+    PyMuPDF extraction:   negligible additional allocation
+    pdfminer fallback:    negligible additional allocation
+    EasyOCR (opt-in):     peak estimated at 3.4–4.1 GB total
+                          EasyOCR is explicitly released after use
+                          (see Memory Safety Measures below)
+
+Phase 3 Commit 5 — VoiceTranscriber:
+    Model:            Faster-Whisper tiny.en INT8
+    Model size:       ~40 MB on disk
+    Runtime RSS:      ~150–200 MB additional (CTranslate2 INT8 engine
+                      + audio buffer for typical <60s clip)
+    Singleton:        Loaded once on first call, resident for process
+                      lifetime — no reload between requests
+    Device:           CPU only (Phase 3) — no CUDA allocation
+    Note:             VoiceTranscriber active peak estimated at
+                      2.3–2.7 GB total (idle + ~200 MB model overhead)
+                      Verify on Jetson during Week 1 profiling.
+
+All Phase 2 memory estimates remain valid.
 
 Warning: if EasyOCR peak exceeds 5.5 GB, implement staged loading in Week 2.
 
@@ -33,14 +60,22 @@ OLLAMA_MAX_LOADED_MODELS=1
 OLLAMA_KEEP_ALIVE=-1
     Model stays resident. Avoids reload latency between pipeline runs.
 
-EasyOCR (when implemented)
-    Explicitly released after use:
-        del self.ocr_reader
-        self.ocr_reader = None
+EasyOCR (Phase 3 Commit 4 — LabReportParser):
+    The EasyOCR Reader is created inside _extract_via_easyocr() and
+    is not retained after the function exits. Under normal conditions
+    it becomes eligible for garbage collection. If memory pressure is
+    observed on Jetson during profiling, explicit cleanup may be enabled:
+        del reader
         gc.collect()
 
-VoiceTranscriber (when implemented)
-    Faster-Whisper model released immediately after transcription.
+Faster-Whisper (Phase 3 Commit 5 — VoiceTranscriber):
+    _MODEL singleton is retained for the process lifetime (lazy singleton
+    pattern). This is intentional — reload cost (~1–2s on CPU) is
+    unacceptable for a real-time triage tool. If memory pressure is
+    observed on Jetson, consider unloading between pipeline runs:
+        import tools.voice_transcriber as vt
+        vt._MODEL = None
+    This is not done by default.
 
 
 ## Stream Buffer Memory
@@ -65,8 +100,7 @@ React + Vite + TypeScript + Tailwind + shadcn/ui contributes zero
 runtime memory to the Jetson when used as a web frontend.
 
 The Streamlit prototype (deprecated) was a server-side Python process
-and would have contributed runtime memory if retained. It is being
-removed entirely.
+and contributed runtime memory. It is being removed entirely.
 
 
 ## Action Items
@@ -74,13 +108,16 @@ removed entirely.
 Week 1:
     Measure idle baseline on Jetson
     Measure ReportGenerator (LLM active) peak on Jetson
+    Measure ExecutionPlanner Ollama call peak (expected negligible)
     Update this file with real measurements
 
 Week 2:
     Measure VoiceTranscriber (Faster-Whisper) peak
-    Measure LabReportParser digital PDF peak
+    Measure LabReportParser digital PDF peak (PyMuPDF path)
+    Measure LabReportParser digital PDF peak (pdfminer fallback path)
     Measure LabReportParser EasyOCR active peak on scanned PDF
     If EasyOCR peak exceeds 5.5 GB, implement staged loading immediately
+    Validate EasyOCR ARM64 — see docs/setup_jetson.md
     Update this file with real measurements
 
 Week 3:

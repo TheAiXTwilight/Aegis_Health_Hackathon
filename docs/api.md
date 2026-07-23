@@ -4,7 +4,7 @@ Base URL: http://localhost:8000 (development)
           http://app:8000        (Docker internal)
 
 The API is frontend-agnostic. Any HTTP client can drive it:
-curl, Postman, Streamlit (deprecated), React (planned), or any other.
+curl, Postman, React (planned), or any other.
 
 
 ## POST /queue/submit
@@ -71,8 +71,7 @@ Error response (400 / 409 / 503):
 Returns live job status including pipeline progress.
 
 Recommended polling interval: 2 seconds while status is queued or running.
-Client implementations should stop polling once status reaches
-"completed" or "failed".
+Stop polling once status reaches "completed" or "failed".
 
 Status codes:
 
@@ -113,16 +112,15 @@ Response (200 — while running):
         "queue_position": null,
         "estimated_wait_seconds": null,
         "current_tool": "MedicalRAGSearch",
-        "tools_run": ["VoiceTranscriber", "SymptomExtractor", "LabReportParser"],
+        "tools_run": ["ExecutionPlanner", "SymptomExtractor"],
         "tools_failed": [],
         "step_durations_ms": {
-            "VoiceTranscriber": 234.1,
-            "SymptomExtractor": 1205.3,
-            "LabReportParser": 890.7
+            "ExecutionPlanner": 1240.5,
+            "SymptomExtractor": 45.2
         }
     }
 
-Response (200 — completed):
+Response (200 — completed, Phase 2.5):
 
     {
         "job_id": "abc-123",
@@ -137,34 +135,51 @@ Response (200 — completed):
         "estimated_wait_seconds": null,
         "current_tool": null,
         "tools_run": [
-            "VoiceTranscriber",
+            "ExecutionPlanner",
             "SymptomExtractor",
-            "LabReportParser",
-            "XRayProcessor",
             "MedicalRAGSearch",
             "DrugInteractionChecker",
             "SeverityScorer",
-            "ReportGenerator"
+            "ReportGenerator",
+            "RuleValidator"
         ],
         "tools_failed": [],
         "step_durations_ms": {
-            "VoiceTranscriber": 234.1,
-            "SymptomExtractor": 1205.3,
-            "LabReportParser": 890.7,
-            "XRayProcessor": 12.4,
+            "ExecutionPlanner": 1240.5,
+            "SymptomExtractor": 45.2,
             "MedicalRAGSearch": 340.2,
             "DrugInteractionChecker": 8.1,
             "SeverityScorer": 3.2,
-            "ReportGenerator": 41203.5
+            "ReportGenerator": 41203.5,
+            "RuleValidator": 2.1
         }
     }
 
 Notes:
-    queue_position and estimated_wait_seconds are populated only
-    when status == "queued".
+    ExecutionPlanner appears in tools_run when it returns ExecutionPlan.
+    When the planner fails and the fallback is used, ExecutionPlanner
+    still appears in tools_run — a fallback plan is a valid result.
+    PlanValidator is not a pipeline tool and does not appear in either list.
+    VoiceTranscriber appears only when audio_file_path was submitted.
+    RuleValidator appears in tools_run on success, tools_failed on ToolError.
+
+    queue_position and estimated_wait_seconds populated only when
+    status == "queued".
     estimated_wait_seconds is null until 3+ pipeline completions recorded.
+
     tools_run and tools_failed are mutually exclusive.
     A tool name appears in exactly one list, never both.
+
+Confidence note:
+
+    report.confidence follows the formula in tools/confidence.py:
+        confidence = 0.4 * coverage + 0.4 * success_rate + 0.2 * truncation
+
+    Phase 2.5 effect: when plan.use_rag=False, MedicalRAGSearch is skipped.
+    RAG is always-submitted in the coverage formula. state.rag_result stays
+    None. Coverage reduces accordingly — the planner's decision to skip RAG
+    is reflected in the confidence score. The clinician sees why via
+    execution_plan_summary in the report.
 
 
 ## GET /queue/stream/{job_id}
@@ -201,6 +216,11 @@ After-stream behaviour:
     after the stream ends. If status is "failed", display the
     mid-stream failure message defined in tools/report_generator.py.
 
+    If validation_status == "override" in the completed report,
+    display a safety banner: the deterministic severity (HIGH) is
+    authoritative and the SLM narrative expressed a lower severity.
+    TriageReport.severity already holds the correct deterministic level.
+
 
 ## GET /health
 
@@ -228,11 +248,12 @@ Field notes:
 
     system_status               Always "ok" until system-level checks land
     inference_active            True when worker holds the inference lock
-    model_loaded                False placeholder until Week 2 Ollama probe
+    model_loaded                Real probe against Ollama /api/tags, TTL-cached 60s
+                                Model name matched by name.split(":")[0] == "aegis-llama"
     gpu_available               Via Jetson device nodes / nvidia-smi / tegrastats
     memory_used_mb              nvidia-smi VRAM or /proc/meminfo used (null if both fail)
     memory_total_mb             nvidia-smi VRAM total or /proc/meminfo total (null if both fail)
-    rag_index_ready             False placeholder until Week 2 ChromaDB/FAISS probe
+    rag_index_ready             False placeholder until Phase 3 ChromaDB/FAISS probe
     queue_depth                 Current number of jobs waiting in FIFO queue
     queue_max                   Always 10
     average_pipeline_duration_s Rolling avg of last 10 completions (null until 3+ recorded)
@@ -240,12 +261,68 @@ Field notes:
     jobs_failed_today           In-memory counter, resets on container restart
 
 
+## TriageReport fields (Phase 2.5 additions)
+
+Two new fields on TriageReport, accessible after a completed job:
+
+execution_plan_summary: str | None
+    Human-readable execution plan summary.
+    Format: "Mandatory: ✓ Tool ✗ Tool ... | Optional: ✓ Tool [FALLBACK] | reasoning"
+
+    Mandatory tools reflect input presence at submission time.
+    Not all mandatory tools will show ✓ — only those whose
+    corresponding input was provided.
+
+    Optional tools reflect plan.use_rag (the planner's decision).
+
+    Suffix tags:
+        [FALLBACK]  — ExecutionPlanner failed; deterministic fallback used
+        [REPAIRED]  — PlanValidator overrode use_rag=False to True
+        (no tag)    — planner succeeded, plan conformed to safety policy
+
+    Example (chest pain session, RAG forced by PlanValidator):
+        "Mandatory: ✓ VoiceTranscriber | ✗ SymptomExtractor | ✗ LabReportParser |
+         ✗ XRayProcessor | ✓ DrugInteractionChecker | Optional: ✓ MedicalRAGSearch
+         [REPAIRED] | Planner chose no RAG but safety override applied."
+
+    Note: VoiceTranscriber shows ✓ when audio was submitted, regardless of
+    whether transcription succeeded. The ✓/✗ reflects input presence, not
+    tool success — tool success is in tools_run/tools_failed.
+
+    None only if execution_plan was unavailable. Cannot occur in normal
+    pipeline flow — execution_plan is guaranteed non-None after
+    _run_execution_planner.
+
+validation_status: str | None
+    RuleValidator outcome: "agreement", "warning", or "override".
+    None when RuleValidator did not run or returned ToolError.
+
+    "agreement" — SLM narrative and deterministic severity concur.
+                  No action required.
+
+    "warning"   — Minor discrepancy or unextractable narrative level.
+                  Flagged for clinician review. No automatic correction.
+
+    "override"  — Deterministic rules require HIGH but narrative
+                  expresses a lower severity. TriageReport.severity
+                  is already set to the deterministic level (HIGH).
+                  Clients SHOULD display a safety banner.
+
+    Client behaviour on "override":
+        Display a prominent safety banner stating that the deterministic
+        severity assessment (HIGH) is authoritative and that the SLM
+        narrative expressed a lower severity level. The discrepancy does
+        not affect the structured severity field — it is informational,
+        surfacing a quality signal about the LLM output for the clinician.
+
+
 ## CORS Status
 
 CORS middleware is not currently configured.
 
-When the React frontend lands, CORS middleware will be added to backend/main.py
-to allow the Vite dev server (http://localhost:5173) to call the backend.
+When the React frontend lands, CORS middleware will be added to
+backend/main.py to allow the Vite dev server (http://localhost:5173)
+to call the FastAPI backend (http://localhost:8000) during development.
 
-Production deployment serves the React build from FastAPI as static files,
-eliminating CORS entirely.
+Production deployment serves the React build from FastAPI as static
+files, eliminating CORS entirely.

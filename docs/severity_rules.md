@@ -122,3 +122,46 @@ RULE_XRAY_CONSOLIDATION         XRayProcessor
 RULE_PROLONGED_SYMPTOMS         SymptomExtractor
 RULE_MODERATE_DRUG_INTERACTION  DrugInteractionChecker
 RULE_DEFAULT_LOW                (none)
+
+
+## Relationship to RuleValidator (Phase 2.5)
+
+RuleValidator (Step 9) uses the deterministic severity level produced
+by SeverityScorer to compare against the LLM narrative.
+
+RuleValidator does NOT re-evaluate rules. It reads:
+    state.severity_result.level  (the authoritative deterministic level)
+
+And compares it against the level expressed in the ### Severity section
+of the report text.
+
+The severity rules themselves are completely unchanged. RuleValidator
+is a post-hoc consistency check — it detects when the SLM narrative
+drifts from the deterministic result, not a modification of the rules.
+
+Override fires when:
+    deterministic_level == "HIGH" and slm_narrative_level != "HIGH"
+
+X-ray findings that appear in both the severity rules AND the PlanValidator
+RAG force list (Pneumothorax, Pulmonary Edema, Cardiomegaly) are handled
+by two independent mechanisms:
+    SeverityScorer  — fires the corresponding HIGH or MEDIUM rule
+    PlanValidator   — forces use_rag=True to retrieve supporting evidence
+
+These mechanisms are fully independent and operate on different data.
+
+
+## Tests
+
+Every rule has at least one fixture in tests/tools/test_severity_scorer.py.
+
+Invariant tests (required, never collapse):
+    test_highest_priority_rule_equals_triggered_rules_zero
+    test_reasons_length_matches_triggered_rules
+
+Structural completeness tests:
+    test_expected_levels_covers_all_rule_constants
+    test_firing_states_covers_all_rule_constants
+
+Tests assert on rule constants from ALL_RULE_CONSTANTS — never on
+reason strings, which may change without breaking tests.
