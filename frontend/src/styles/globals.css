@@ -9,16 +9,37 @@ html,
 body,
 #root {
   width: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
+  min-height: 100%;
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  font-family: "Inter", system-ui, sans-serif;
   background: linear-gradient(
     145deg,
     #e2ecfc 0%,
     #cbdcf7 50%,
     #b3cdfa 100%
   );
+}
+
+/* Responsive safety rules */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.page-content,
+.page-content > * {
+  min-width: 0;
 }

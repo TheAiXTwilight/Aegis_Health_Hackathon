@@ -264,10 +264,7 @@
 }
 
 .dropdown-menu {
-  position: absolute;
-  top: 15px;
-  left: 100%;
-  margin-left: 1px;
+  /* position/top/left are set inline via menuCoords in ReportPage.jsx */
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
@@ -278,7 +275,19 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  animation: fadeInRight 0.15s ease-out forwards;
+  min-width: 190px;
+  animation: menuFadeIn 0.15s ease-out forwards;
+}
+
+@keyframes menuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dropdown-item {
@@ -305,17 +314,6 @@
 .dropdown-item:hover {
   background: rgba(255, 255, 255, 0.4);
   color: #2563ff;
-}
-
-@keyframes fadeInRight {
-  from {
-    opacity: 0;
-    transform: translateX(-15px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 /* --- REPORT STREAM / PREVIEW TEXT RENDERING --- */
@@ -655,4 +653,19 @@
 
 .report-text-container ul.care-plan-list li::marker {
   color: #a3b3d1;
+}
+
+/* Keep Report header action buttons on one line. */
+.right-card-header > div:last-child {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+.right-card-header > div:last-child button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.report-dashboard-card {
+  width: min(1120px, 95vw);
 }

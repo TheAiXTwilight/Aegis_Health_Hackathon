@@ -38,7 +38,18 @@ from tools.report_analyst import (
     XrayFinding,
     is_urgent,
     is_moderate,
+    display_symptom,
 )
+
+# Only these atomic, well-understood symptom names are allowed to
+# generate a "general" bucket chip — this bucket is where loose
+# extraction noise tends to land, so we don't want to fabricate a
+# question about something that isn't a clean, real symptom.
+_KNOWN_ATOMIC_GENERAL = {
+    "fever", "fatigue", "cough", "nausea", "vomiting", "diarrhea",
+    "swelling", "rash", "insomnia", "weight loss", "weight gain",
+    "sore throat",
+}
 
 
 @dataclass
@@ -151,51 +162,68 @@ def _symptom_candidates(intel: ReportIntelligence, fp: set[str]) -> list[_Candid
     out: list[_Candidate] = []
 
     for symptom in intel.symptom_groups.cardiac[:2]:
+        disp = display_symptom(symptom)
         key = f"symptom_cardiac_{symptom[:12]}"
         if _any_covered(fp, symptom.lower()):
             continue
         out.append(_Candidate(
-            text=f"Could my {symptom.lower()} be a sign of something serious?",
+            text=f"Could my {disp} be a sign of something serious?",
             score=5.0,
             topic_key=key,
         ))
 
     for symptom in intel.symptom_groups.respiratory[:2]:
+        disp = display_symptom(symptom)
         key = f"symptom_resp_{symptom[:12]}"
         if _any_covered(fp, symptom.lower()):
             continue
         out.append(_Candidate(
-            text=f"Is my {symptom.lower()} linked to the {intel.severity} severity rating?",
+            text=f"Is my {disp} linked to the {intel.severity} severity rating?",
             score=4.5,
             topic_key=key,
         ))
 
     for symptom in intel.symptom_groups.neurological[:2]:
+        disp = display_symptom(symptom)
         key = f"symptom_neuro_{symptom[:12]}"
         if _any_covered(fp, symptom.lower()):
             continue
         out.append(_Candidate(
-            text=f"What could be causing my {symptom.lower()}?",
+            text=f"What could be causing my {disp}?",
             score=4.2,
             topic_key=key,
         ))
 
     for symptom in intel.symptom_groups.metabolic[:1]:
+        disp = display_symptom(symptom)
         key = f"symptom_meta_{symptom[:12]}"
         if _any_covered(fp, symptom.lower()):
             continue
         out.append(_Candidate(
-            text=f"What does my {symptom.lower()} finding suggest?",
+            text=f"What does my {disp} finding suggest?",
             score=3.8,
             topic_key=key,
         ))
 
+    # General-bucket symptoms are the noisiest category (often loose
+    # extraction artifacts), so only surface a chip when the symptom is
+    # a real, known atomic symptom — never fabricate/guess a chip for
+    # something that isn't actually a clean recorded finding.
     for symptom in intel.symptom_groups.general[:2]:
+        disp = display_symptom(symptom)
+        # Containment, not exact match: extraction may return "mild fever"
+        # or "unintentional weight loss" rather than the bare atomic term.
+        # A real recorded symptom should still surface a chip as long as
+        # a known atomic symptom is clearly present in it; this only
+        # blocks names that don't contain any recognized symptom at all
+        # (the actual noise case, e.g. leftover admin/lab fragments).
+        if not any(atom in disp.lower() for atom in _KNOWN_ATOMIC_GENERAL):
+            continue
         key = f"symptom_gen_{symptom[:12]}"
         if _any_covered(fp, symptom.lower()):
             continue
         out.append(_Candidate(
-            text=f"Why am I experiencing {symptom.lower()} according to this report?",
+            text=f"What could be causing my {disp}?",
             score=3.0,
             topic_key=key,
         ))
@@ -278,6 +306,79 @@ def _followup_candidates(
             text=f"My symptoms have lasted {intel.symptom_duration} — is that too long to wait?",
             score=3.8,
             topic_key="duration",
+        ))
+
+    return out
+
+
+def _fallback_candidates(
+    intel: ReportIntelligence,
+    fp: set[str],
+    severity: str,
+) -> list[_Candidate]:
+    """
+    Generic-but-grounded fallback candidates, used only once the
+    specific generators above have nothing left to offer (every lab,
+    symptom, medication, and imaging finding already covered).
+
+    Previously this was a single hardcoded question
+    ("What are the main concerns in my {severity} report?"), which
+    meant that once real candidates ran out — easy to happen on a
+    short 2-3 value report — the SAME chip kept reappearing turn
+    after turn with no way to dismiss it. This pool gives several
+    distinct, still report-grounded options and runs through the
+    same _covered()/_already_asked() filtering as every other
+    candidate, so each one is offered once and then retired.
+    """
+    out: list[_Candidate] = []
+
+    if not _any_covered(fp, "main concern", "concerns"):
+        out.append(_Candidate(
+            text=f"What are the main concerns in my {severity} report?",
+            score=1.0,
+            topic_key="fallback_main_concerns",
+        ))
+
+    if not _any_covered(fp, "confidence", "how sure", "how confident"):
+        out.append(_Candidate(
+            text="How confident is this assessment, and why?",
+            score=0.9,
+            topic_key="fallback_confidence",
+        ))
+
+    if not _any_covered(fp, "trend", "improving", "worsening", "changed"):
+        out.append(_Candidate(
+            text="How has my health trended across my reports?",
+            score=0.85,
+            topic_key="fallback_trend",
+        ))
+
+    if not _any_covered(fp, "doctor", "specialist", "clinician", "physician"):
+        out.append(_Candidate(
+            text="Should I see a doctor about any of this, and which kind?",
+            score=0.8,
+            topic_key="fallback_specialist",
+        ))
+
+    if not _any_covered(fp, "recheck", "retest", "repeat test", "monitor"):
+        out.append(_Candidate(
+            text="Should any of these values be rechecked, and when?",
+            score=0.75,
+            topic_key="fallback_recheck",
+        ))
+
+    if not _any_covered(fp, "lifestyle", "diet", "exercise", "prevent"):
+        out.append(_Candidate(
+            text="Are there lifestyle changes that could help with this?",
+            score=0.7,
+            topic_key="fallback_lifestyle",
+        ))
+
+    if not _any_covered(fp, "normal range", "reference range", "what is normal"):
+        out.append(_Candidate(
+            text="What do the normal reference ranges mean for my results?",
+            score=0.65,
+            topic_key="fallback_ranges",
         ))
 
     return out
@@ -378,6 +479,7 @@ def build_suggested_questions(
     all_candidates.extend(_medication_candidates(intel, fp))
     all_candidates.extend(_imaging_candidates(intel, fp))
     all_candidates.extend(_followup_candidates(intel, fp, used_turns))
+    all_candidates.extend(_fallback_candidates(intel, fp, severity))
 
     all_candidates.sort(key=lambda c: c.score, reverse=True)
 
@@ -403,7 +505,9 @@ def build_suggested_questions(
         if len(result) >= max_questions:
             break
 
-    if not result:
-        result = [f"What are the main concerns in my {severity} report?"]
-
+    # Note: `result` can legitimately be empty once every specific
+    # candidate AND every fallback candidate has been covered or
+    # already asked — that's correct behaviour for a long, thorough
+    # conversation rather than something to paper over with a repeat
+    # of a question already answered.
     return result

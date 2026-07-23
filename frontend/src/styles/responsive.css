@@ -1,0 +1,3796 @@
+/* ==========================================================
+   AEGISHEALTH — DESKTOP / LAPTOP RESPONSIVE OVERRIDES
+
+   Base component CSS remains in its original files.
+   All dynamic desktop/laptop fixes belong here.
+
+   Reference desktop viewport:
+   1920 × 1205
+
+   Smaller tested laptop viewport:
+   1470 × 923
+   ========================================================== */
+
+   /* ==========================================================
+   HOME — PROPORTIONAL LAPTOP / DESKTOP SCALING
+   Reference viewport: 1920 × 1205
+   ========================================================== */
+
+@media (max-width: 1919px) {
+
+.hero-container {
+  left: clamp(46px, 3.125vw, 60px);
+  top: clamp(90px, 11.62vh, 140px);
+  bottom: clamp(54px, 6.64vh, 80px);
+}
+
+.hero-card {
+  width: clamp(460px, 36.458vw, 700px);
+  padding: clamp(36px, 2.865vw, 55px);
+  border-radius: clamp(25px, 1.98vw, 38px);
+}
+
+.hero-card::before {
+  width: clamp(270px, 20.833vw, 400px);
+  height: clamp(270px, 20.833vw, 400px);
+}
+
+.tag {
+  gap: clamp(4px, 0.313vw, 6px);
+  padding:
+    clamp(7px, 0.521vw, 10px)
+    clamp(12px, 0.938vw, 18px);
+
+  border-radius: clamp(10px, 0.729vw, 14px);
+  font-size: clamp(10px, 0.677vw, 13px);
+  margin-bottom: clamp(22px, 1.823vw, 35px);
+}
+
+.hero-card h3 {
+  font-size: clamp(32px, 2.344vw, 45px);
+  letter-spacing: clamp(-2px, -0.104vw, -1.6px);
+  margin-bottom: clamp(20px, 1.667vw, 32px);
+}
+
+.hero-card p {
+  font-size: clamp(13.5px, 0.885vw, 17px);
+  line-height: 1.6;
+  margin-bottom: clamp(22px, 1.823vw, 35px);
+}
+
+.hero-card h1 {
+  font-size: clamp(16px, 1.146vw, 22px);
+  margin-bottom: clamp(25px, 2.083vw, 40px);
+}
+
+.scan-btn {
+  height: clamp(52px, 3.542vw, 68px);
+  gap: clamp(16px, 1.25vw, 24px);
+  padding-inline: clamp(24px, 2.083vw, 40px);
+  font-size: clamp(15px, 0.99vw, 19px);
+}
+
+.scan-btn .arrow {
+  font-size: clamp(19px, 1.25vw, 24px);
+}
+
+/* ==========================================================
+   HEALTH SCAN — PROPORTIONAL LAPTOP / DESKTOP SCALING
+   Reference viewport: 1920 × 1205
+
+   Keeps the exact Health Scan design, but scales card,
+   typography, button, and spacing proportionally.
+   ========================================================== */
+
+
+/* Preserve proportional vertical placement. */
+.scan-center-container {
+  top: clamp(72px, 7.884vh, 95px);
+  bottom: clamp(60px, 6.64vh, 80px);
+}
+
+
+/*
+  Reference:
+  680px / 1920px = 35.417vw
+
+  1920px viewport → 680px card
+  1470px viewport → ~521px card
+*/
+.scan-glass-card {
+  width: clamp(470px, 35.417vw, 680px);
+  padding:
+    clamp(46px, 3.385vw, 65px)
+    clamp(30px, 2.083vw, 40px);
+
+  border-radius: clamp(30px, 2.083vw, 40px);
+}
+
+
+/* Heading */
+.scan-glass-card h2 {
+  font-size: clamp(34px, 2.292vw, 44px);
+  margin-bottom: clamp(18px, 1.25vw, 24px);
+}
+
+
+/* Supporting text */
+.scan-subtitle {
+  font-size: clamp(13px, 0.885vw, 17px);
+  margin-bottom: clamp(6px, 0.417vw, 8px);
+}
+
+.scan-desc {
+  font-size: clamp(12px, 0.781vw, 15px);
+  margin-bottom: clamp(30px, 2.083vw, 40px);
+}
+
+
+/*
+  Scope this specifically to the Health Scan card.
+  It will not affect Medical Form buttons or other pages.
+*/
+.scan-glass-card .form-action-btn {
+  width: 100%;
+  max-width: clamp(380px, 26.042vw, 500px);
+  height: clamp(49px, 3.333vw, 64px);
+  min-height: clamp(49px, 3.333vw, 64px);
+
+  padding-inline: clamp(28px, 1.875vw, 36px);
+  gap: clamp(11px, 0.729vw, 14px);
+  border-radius: clamp(15px, 1.042vw, 20px);
+
+  font-size: clamp(15px, 0.99vw, 19px);
+}
+
+.scan-glass-card .form-action-btn .form-icon {
+  font-size: clamp(16px, 1.042vw, 20px);
+}
+
+
+/* Estimated-time line */
+.time-estimate {
+  margin-top: clamp(24px, 1.667vw, 32px);
+  gap: clamp(6px, 0.417vw, 8px);
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+/* ==========================================================
+   MEDICAL FORM — PROPORTIONAL LAPTOP / DESKTOP SCALING
+   Reference viewport: 1920 × 1205
+   ========================================================== */
+
+
+/* Scale the available form area vertically with the viewport. */
+.form-center-container {
+  --form-top-space: clamp(72px, 7.884vh, 95px);
+  --form-bottom-space: clamp(60px, 6.64vh, 80px);
+
+  top: var(--form-top-space);
+  bottom: var(--form-bottom-space);
+  padding:
+    clamp(8px, 0.521vw, 10px)
+    clamp(18px, 1.25vw, 24px);
+}
+
+
+/*
+  Reference:
+  900px / 1920px = 46.875vw
+
+  1920px viewport → 900px card
+  1470px viewport → ~689px card
+*/
+.medical-form-card {
+  width: clamp(650px, 46.875vw, 900px);
+
+  padding:
+    clamp(33px, 2.344vw, 45px)
+    clamp(36px, 2.604vw, 50px);
+
+  border-radius: clamp(30px, 2.083vw, 40px);
+
+  /*
+    Prevents the form from extending behind the footer on a
+    shorter laptop viewport. Scroll appears only if necessary.
+  */
+  max-height: calc(
+    100dvh - var(--form-top-space) - var(--form-bottom-space) - 16px
+  );
+
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 255, 0.3) transparent;
+}
+
+.medical-form-card::-webkit-scrollbar {
+  width: 5px;
+}
+
+.medical-form-card::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 255, 0.28);
+  border-radius: 999px;
+}
+
+
+/* Form heading */
+.medical-form-card h2 {
+  font-size: clamp(29px, 1.979vw, 38px);
+  margin-bottom: clamp(27px, 1.823vw, 35px);
+}
+
+
+/* Accordion layout */
+.medical-form-card .accordion-wrapper {
+  gap: clamp(12px, 0.833vw, 16px);
+  margin-bottom: clamp(27px, 1.823vw, 35px);
+}
+
+.medical-form-card .accordion-section {
+  border-radius: clamp(17px, 1.146vw, 22px);
+}
+
+.medical-form-card .accordion-header {
+  padding:
+    clamp(12px, 0.833vw, 16px)
+    clamp(18px, 1.25vw, 24px);
+}
+
+.medical-form-card .header-left {
+  gap: clamp(14px, 0.938vw, 18px);
+}
+
+.medical-form-card .icon-badge {
+  width: clamp(29px, 1.979vw, 38px);
+  height: clamp(29px, 1.979vw, 38px);
+  border-radius: clamp(9px, 0.625vw, 12px);
+  font-size: clamp(12px, 0.833vw, 16px);
+}
+
+.medical-form-card .accordion-header h3 {
+  font-size: clamp(12px, 0.833vw, 16px);
+}
+
+.medical-form-card .optional {
+  font-size: clamp(11px, 0.729vw, 14px);
+  margin-left: clamp(3px, 0.208vw, 4px);
+}
+
+.medical-form-card .toggle-indicator {
+  width: clamp(21px, 1.458vw, 28px);
+  height: clamp(21px, 1.458vw, 28px);
+  font-size: clamp(14px, 0.938vw, 18px);
+}
+
+.medical-form-card .accordion-content {
+  padding:
+    clamp(8px, 0.521vw, 10px)
+    clamp(18px, 1.25vw, 24px)
+    clamp(21px, 1.458vw, 28px);
+}
+
+
+/* Form-grid spacing and labels */
+.medical-form-card .form-grid {
+  gap: clamp(15px, 1.042vw, 20px);
+}
+
+.medical-form-card .input-group {
+  gap: clamp(7px, 0.521vw, 10px);
+}
+
+.medical-form-card .input-group label {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+.medical-form-card .margin-bottom-20 {
+  margin-bottom: clamp(15px, 1.042vw, 20px);
+}
+
+
+/* Input fields */
+.medical-form-card .field-icon {
+  left: clamp(12px, 0.833vw, 16px);
+  font-size: clamp(11px, 0.781vw, 15px);
+}
+
+.medical-form-card .input-with-icon input {
+  height: clamp(37px, 2.5vw, 48px);
+  padding-left: clamp(35px, 2.396vw, 46px);
+  padding-right: clamp(12px, 0.833vw, 16px);
+  border-radius: clamp(10px, 0.729vw, 14px);
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+.medical-form-card .glass-textarea {
+  height: clamp(69px, 4.688vw, 90px);
+  padding:
+    clamp(11px, 0.729vw, 14px)
+    clamp(12px, 0.833vw, 16px)
+    clamp(11px, 0.729vw, 14px)
+    clamp(35px, 2.396vw, 46px);
+
+  border-radius: clamp(10px, 0.729vw, 14px);
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+
+/* Blood-group / radio controls */
+.medical-form-card .radio-group {
+  gap: clamp(11px, 0.729vw, 14px);
+  height: clamp(37px, 2.5vw, 48px);
+}
+
+.medical-form-card .radio-label {
+  gap: clamp(7px, 0.521vw, 10px);
+  padding-inline: clamp(12px, 0.833vw, 16px);
+  border-radius: clamp(10px, 0.729vw, 14px);
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+.medical-form-card .custom-radio {
+  width: clamp(14px, 0.938vw, 18px);
+  height: clamp(14px, 0.938vw, 18px);
+}
+
+
+/* Custom select */
+.medical-form-card .glass-select {
+  height: clamp(37px, 2.5vw, 48px);
+  padding-left: clamp(35px, 2.396vw, 46px);
+  padding-right: clamp(30px, 2.083vw, 40px);
+  border-radius: clamp(10px, 0.729vw, 14px);
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+.medical-form-card .select-arrow {
+  right: clamp(13px, 0.938vw, 18px);
+  font-size: clamp(9px, 0.625vw, 12px);
+}
+
+
+/* File-upload sections */
+.medical-form-card .glass-file-dropzone {
+  gap: clamp(15px, 1.042vw, 20px);
+  padding:
+    clamp(14px, 0.938vw, 18px)
+    clamp(18px, 1.25vw, 24px);
+
+  border-radius: clamp(12px, 0.833vw, 16px);
+}
+
+.medical-form-card .upload-cloud-icon {
+  font-size: clamp(18px, 1.25vw, 24px);
+}
+
+.medical-form-card .primary-upload-text {
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+.medical-form-card .secondary-upload-text {
+  font-size: clamp(9px, 0.625vw, 12px);
+}
+
+
+/* Submit button */
+.medical-form-card .form-submit-btn {
+  width: clamp(184px, 12.5vw, 240px);
+  height: clamp(43px, 2.917vw, 56px);
+  gap: clamp(7px, 0.521vw, 10px);
+
+  border-radius: clamp(14px, 0.938vw, 18px);
+  font-size: clamp(13px, 0.885vw, 17px);
+}
+
+/* ==========================================================
+   MEDICAL FORM — SMALL NAVBAR CLEARANCE
+   Adds visual clearance below the Navbar without reducing
+   the Medical Form container height or causing scrolling.
+   ========================================================== */
+
+.medical-form-card {
+  position: relative;
+
+  /*
+    1920px reference viewport → 0px shift
+    1470px laptop viewport   → about 10px shift
+  */
+  top: clamp(0px, calc(42px - 2.222vw), 8px);
+}
+
+/* ==========================================================
+   REPORT — PROPORTIONAL LAPTOP / DESKTOP SCALING
+   Reference viewport: 1920 × 1205
+   ========================================================== */
+
+
+/*
+  Main two-card Report area.
+
+  At 1920px:
+  - width allowance = 140px
+  - gap = 26px
+  - height = 985px approximately
+
+  At 1470px:
+  - all of these become proportionally smaller.
+*/
+.report-dual-cards-wrapper {
+  width: calc(100vw - clamp(107px, 7.292vw, 140px)) !important;
+  max-width: none !important;
+
+  gap: clamp(20px, 1.354vw, 26px) !important;
+
+  /*
+    Keeps the report tall enough at the smaller viewport, but
+    never exceeds the form-centre area available above the footer.
+  */
+  height: min(
+    81.743dvh,
+    calc(100dvh - 175px)
+  ) !important;
+}
+
+
+/* Both large report glass panels */
+.report-left-card,
+.report-right-card {
+  border-radius: clamp(29px, 1.979vw, 38px) !important;
+}
+
+
+/* Left report card */
+.report-left-card {
+  padding:
+    clamp(20px, 1.354vw, 26px)
+    clamp(23px, 1.563vw, 30px) !important;
+
+  gap: clamp(12px, 0.833vw, 16px) !important;
+}
+
+
+/*
+  Pipeline section:
+  270px at reference → ~207px at the 13-inch viewport.
+*/
+.report-left-card .pipeline-col {
+  flex: 0 0 clamp(205px, 14.063vw, 270px) !important;
+  width: clamp(205px, 14.063vw, 270px) !important;
+
+  padding-right: clamp(6px, 0.417vw, 8px) !important;
+  padding-left: clamp(5px, 0.313vw, 6px) !important;
+}
+
+.report-left-card .pipeline-col > h2,
+.report-left-card .report-history-heading {
+  font-size: clamp(14.5px, 0.99vw, 19px) !important;
+}
+
+.report-left-card .pipeline-col > h2 {
+  margin-bottom: clamp(12px, 0.833vw, 16px) !important;
+  padding-left: clamp(4px, 0.313vw, 6px) !important;
+}
+
+.report-left-card .pipeline-container {
+  padding-left: clamp(9px, 0.625vw, 12px) !important;
+  padding-top: clamp(4px, 0.313vw, 6px) !important;
+  padding-bottom: clamp(4px, 0.313vw, 6px) !important;
+}
+
+
+/* Pipeline row / node scaling */
+.report-left-card .pipeline-container {
+  gap: clamp(12px, 0.833vw, 16px);
+}
+
+.report-left-card .pipeline-row {
+  height: clamp(52px, 3.542vw, 68px);
+  gap: clamp(15px, 1.042vw, 20px);
+}
+
+.report-left-card .node-wrapper,
+.report-left-card .pipeline-node {
+  width: clamp(25px, 1.667vw, 32px);
+  height: clamp(25px, 1.667vw, 32px);
+}
+
+.report-left-card .pipeline-line {
+  top: clamp(25px, 1.667vw, 32px);
+  height: clamp(40px, 2.708vw, 52px);
+}
+
+.report-left-card .check-mark {
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+.report-left-card .step-info h3 {
+  font-size: clamp(11.5px, 0.781vw, 15px);
+  margin-bottom: clamp(2px, 0.156vw, 3px);
+}
+
+.report-left-card .status-label {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+
+/* History side of the left card */
+.report-left-card .history-col {
+  padding-left: clamp(12px, 0.833vw, 16px) !important;
+}
+
+.report-left-card .report-history-heading {
+  height: clamp(44px, 3.021vw, 58px) !important;
+  padding-bottom: clamp(12px, 0.833vw, 16px) !important;
+  margin-bottom: clamp(12px, 0.833vw, 16px) !important;
+}
+
+.report-left-card .history-container {
+  gap: clamp(7px, 0.521vw, 10px) !important;
+  padding-right: clamp(3px, 0.208vw, 4px) !important;
+}
+
+.report-left-card .history-row-item {
+  min-height: clamp(51px, 3.438vw, 66px) !important;
+  padding:
+    clamp(8px, 0.521vw, 10px)
+    clamp(11px, 0.729vw, 14px) !important;
+
+  border-radius: clamp(12px, 0.833vw, 16px);
+}
+
+.report-left-card .file-doc-icon-wrapper {
+  width: clamp(31px, 2.083vw, 40px);
+  height: clamp(31px, 2.083vw, 40px);
+  border-radius: clamp(8px, 0.521vw, 10px);
+}
+
+.report-left-card .file-doc-icon {
+  width: clamp(16px, 1.042vw, 20px);
+  height: clamp(16px, 1.042vw, 20px);
+}
+
+
+/* Right report card */
+.report-right-card {
+  padding:
+    clamp(20px, 1.354vw, 26px)
+    clamp(26px, 1.771vw, 34px) !important;
+}
+
+.report-right-card .right-card-header {
+  height: clamp(44px, 3.021vw, 58px) !important;
+  padding-bottom: clamp(12px, 0.833vw, 16px) !important;
+  margin-bottom: clamp(12px, 0.833vw, 16px) !important;
+}
+
+.report-right-card .right-card-fixed-top {
+  gap: clamp(11px, 0.729vw, 14px) !important;
+  margin-bottom: clamp(15px, 1.042vw, 20px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div {
+  padding:
+    clamp(12px, 0.833vw, 16px)
+    clamp(15px, 1.042vw, 20px) !important;
+
+  border-radius: clamp(12px, 0.833vw, 16px) !important;
+}
+
+.report-right-card .right-card-scrollable-preview {
+  gap: clamp(15px, 1.042vw, 20px) !important;
+  padding-right: clamp(4px, 0.313vw, 6px) !important;
+  padding-top: clamp(3px, 0.208vw, 4px) !important;
+  padding-bottom: clamp(9px, 0.625vw, 12px) !important;
+}
+
+
+/* Patient Preview / report text */
+.report-right-card .report-text-container {
+  font-size: clamp(11px, 0.729vw, 14px) !important;
+}
+
+.report-right-card .report-text-container h1,
+.report-right-card .report-text-container h2,
+.report-right-card .report-text-container h3,
+.report-right-card .report-text-container h4 {
+  margin-bottom: clamp(9px, 0.625vw, 12px) !important;
+}
+
+.report-right-card .report-text-container p {
+  margin-block: clamp(7px, 0.521vw, 10px) !important;
+}
+
+.report-right-card .report-text-container ul,
+.report-right-card .report-text-container ol {
+  padding-left: clamp(16px, 1.146vw, 22px) !important;
+  margin-bottom: clamp(10px, 0.729vw, 14px) !important;
+}
+
+.report-right-card .report-text-container li {
+  font-size: clamp(11px, 0.729vw, 14px) !important;
+}
+
+/* ==========================================================
+   REPORT — RIGHT PANEL CONTENT REFINEMENT
+   Scales inline-styled ReportPage content proportionally.
+   ========================================================== */
+
+
+/* ---------- Right report header ---------- */
+
+.report-right-card .right-card-header h2 {
+  font-size: clamp(17px, 1.146vw, 22px) !important;
+}
+
+.report-right-card .right-card-header > div:first-child > span {
+  font-size: clamp(9px, 0.625vw, 12px) !important;
+}
+
+.report-right-card .right-card-header > div:last-child {
+  gap: clamp(6px, 0.521vw, 10px) !important;
+}
+
+.report-right-card .right-card-header > div:last-child > button {
+  padding:
+    clamp(7px, 0.521vw, 10px)
+    clamp(10px, 0.729vw, 14px) !important;
+
+  border-radius: clamp(10px, 0.729vw, 14px) !important;
+  gap: clamp(5px, 0.417vw, 8px) !important;
+  font-size: clamp(10px, 0.677vw, 13px) !important;
+}
+
+.report-right-card .right-card-header > div:last-child > button svg {
+  width: clamp(14px, 0.938vw, 18px) !important;
+  height: clamp(14px, 0.938vw, 18px) !important;
+}
+
+
+/* ---------- Safety validation card ---------- */
+
+.report-right-card .right-card-fixed-top > div:first-child > div:first-child {
+  gap: clamp(6px, 0.417vw, 8px) !important;
+  font-size: clamp(11px, 0.729vw, 14px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div:first-child > div:first-child span:first-child {
+  font-size: clamp(12px, 0.833vw, 16px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div:first-child > p {
+  font-size: clamp(10px, 0.677vw, 13px) !important;
+  line-height: 1.45 !important;
+}
+
+
+/* ---------- Agentic Plan / Tool Audit card ---------- */
+
+.report-right-card .right-card-fixed-top > div:nth-child(2) {
+  gap: clamp(7px, 0.521vw, 10px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div:nth-child(2) > div:first-child > span:first-child {
+  font-size: clamp(9px, 0.625vw, 12px) !important;
+  letter-spacing: clamp(0.3px, 0.026vw, 0.5px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div:nth-child(2) span {
+  font-size: clamp(8.5px, 0.573vw, 11px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div:nth-child(2) > div:last-child {
+  margin-top: clamp(3px, 0.208vw, 4px) !important;
+  padding-top: clamp(7px, 0.521vw, 10px) !important;
+  font-size: clamp(9px, 0.625vw, 12px) !important;
+  line-height: 1.4 !important;
+}
+
+
+/* ---------- Patient Preview typography ---------- */
+
+.report-right-card .report-text-container h1 {
+  font-size: clamp(17px, 1.146vw, 22px) !important;
+}
+
+.report-right-card .report-text-container h2 {
+  font-size: clamp(15.5px, 1.042vw, 20px) !important;
+}
+
+.report-right-card .report-text-container h3 {
+  font-size: clamp(14px, 0.938vw, 18px) !important;
+}
+
+.report-right-card .report-text-container h4 {
+  font-size: clamp(12px, 0.781vw, 15px) !important;
+}
+
+.report-right-card .report-text-container p,
+.report-right-card .report-text-container li {
+  font-size: clamp(10.5px, 0.729vw, 14px) !important;
+}
+
+.report-right-card .report-text-container ul,
+.report-right-card .report-text-container ol {
+  padding-left: clamp(17px, 1.146vw, 22px) !important;
+}
+
+/* ==========================================================
+   REPORT PREVIEW — VITALS / MORPHOLOGY / FLAGS TYPOGRAPHY
+   Final content-level refinement.
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   NORMAL REPORT BODY
+   Slightly larger again, as requested.
+   ---------------------------------------------------------- */
+
+.report-right-card .report-text-container p,
+.report-right-card .report-text-container
+  li:not(.vital-line):not(.vital-line-plain) {
+  font-size: clamp(11.5px, 0.8vw, 15px) !important;
+  line-height: 1.6 !important;
+}
+
+
+/* ----------------------------------------------------------
+   VITAL FINDINGS
+   These use special existing !important rules, so they need
+   direct overrides. Keeps dense biomarker rows compact.
+   ---------------------------------------------------------- */
+
+.report-right-card .report-text-container ul.findings-list li.vital-line,
+.report-right-card .report-text-container ul.findings-list li.vital-line-plain {
+  font-size: clamp(10.5px, 0.729vw, 14px) !important;
+  line-height: 1.55 !important;
+  margin-block: clamp(4px, 0.313vw, 6px) !important;
+}
+
+.report-right-card .report-text-container .vital-name,
+.report-right-card .report-text-container .vital-value,
+.report-right-card .report-text-container .vital-status,
+.report-right-card .report-text-container .vital-status-word {
+  font-size: inherit !important;
+}
+
+.report-right-card .report-text-container .vital-unit,
+.report-right-card .report-text-container .vital-range {
+  font-size: clamp(9.5px, 0.65vw, 12.5px) !important;
+}
+
+.report-right-card .report-text-container .vital-sep {
+  padding-inline: clamp(5px, 0.417vw, 8px) !important;
+  font-size: clamp(9.5px, 0.65vw, 12.5px) !important;
+}
+
+
+/* ----------------------------------------------------------
+   MORPHOLOGY / FINDINGS HEADINGS
+   Slightly smaller and denser than normal body headings.
+   ---------------------------------------------------------- */
+
+.report-right-card .report-text-container h4.findings-heading {
+  font-size: clamp(12px, 0.781vw, 15px) !important;
+  margin:
+    clamp(13px, 0.938vw, 18px)
+    0
+    clamp(7px, 0.521vw, 10px)
+    0 !important;
+
+  padding-bottom: clamp(4px, 0.313vw, 6px) !important;
+}
+
+.report-right-card .report-text-container h3 {
+  font-size: clamp(13px, 0.885vw, 17px) !important;
+}
+
+
+/* ----------------------------------------------------------
+   CRITICAL OBSERVATIONS / FLAGS
+   Bold words such as DETECTED must not become bigger than
+   their parent line. They should only be bold.
+   ---------------------------------------------------------- */
+
+.report-right-card .report-text-container li strong,
+.report-right-card .report-text-container p strong {
+  font-size: inherit !important;
+  line-height: inherit !important;
+  font-weight: 750 !important;
+}
+
+/* ==========================================================
+   REPORT — FINAL HEADER / HISTORY TYPOGRAPHY REFINEMENT
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Right header: Job ID and Status
+   Same visual size as Report Preview body text.
+   ---------------------------------------------------------- */
+
+.report-right-card .right-card-header > div:first-child > span {
+  font-size: clamp(11px, 0.8vw, 14px) !important;
+}
+
+
+/* ----------------------------------------------------------
+   Agentic Plan Theater & Tool Audit heading
+   Match Report Preview body text size.
+   ---------------------------------------------------------- */
+
+.report-right-card
+  .right-card-fixed-top
+  > div:nth-child(2)
+  > div:first-child
+  > span:first-child {
+  font-size: clamp(11px, 0.8vw, 14px) !important;
+}
+
+
+/* ----------------------------------------------------------
+   Left Report History entry
+   Make report name/date/time/status more compact.
+   ---------------------------------------------------------- */
+
+.report-left-card .report-title-text {
+  font-size: clamp(10.5px, 0.729vw, 13px) !important;
+  line-height: 1.25 !important;
+}
+
+.report-left-card .report-sub-text {
+  font-size: clamp(9px, 0.625vw, 11px) !important;
+  line-height: 1.3 !important;
+}
+
+.report-left-card .report-sub-text span {
+  font-size: inherit !important;
+}
+
+/* ==========================================================
+   REPORT — FINAL JOB / AGENTIC TYPOGRAPHY ADJUSTMENT
+   ========================================================== */
+
+
+/* Restore Job ID and Status to the earlier smaller size. */
+.report-right-card .right-card-header > div:first-child > span {
+  font-size: clamp(9px, 0.625vw, 12px) !important;
+}
+
+
+/*
+  Agentic Plan Theater heading matches the normal Report Preview
+  body text exactly.
+*/
+.report-right-card
+  .right-card-fixed-top
+  > div:nth-child(2)
+  > div:first-child
+  > span:first-child {
+  font-size: clamp(11.5px, 0.8vw, 15px) !important;
+}
+
+/* ==========================================================
+   REPORT — UNIFIED BODY TYPOGRAPHY
+   Uses Patient Information body font as the standard.
+   ========================================================== */
+
+.report-right-card {
+  /*
+    This is the Patient Information body-text size.
+    It becomes the shared report-body typography standard.
+  */
+  --report-body-font-size: clamp(11.5px, 0.8vw, 15px);
+}
+
+
+/* ----------------------------------------------------------
+   Report Preview:
+   Apply Patient Information body size to normal preview text.
+   Special compact vital-line rules remain untouched.
+   ---------------------------------------------------------- */
+
+.report-right-card .report-text-container p,
+.report-right-card .report-text-container
+  li:not(.vital-line):not(.vital-line-plain) {
+  font-size: var(--report-body-font-size) !important;
+}
+
+
+/* ----------------------------------------------------------
+   Agentic Plan Theater & Tool Audit:
+   Use the same standard body size for its labels, tool names,
+   reasoning text, and heading.
+   ---------------------------------------------------------- */
+
+.report-right-card .right-card-fixed-top > div:nth-child(2),
+.report-right-card .right-card-fixed-top > div:nth-child(2) span,
+.report-right-card .right-card-fixed-top > div:nth-child(2) strong {
+  font-size: var(--report-body-font-size) !important;
+}
+
+/* Keep the reasoning text aligned with the same body standard. */
+.report-right-card .right-card-fixed-top > div:nth-child(2) > div:last-child {
+  font-size: var(--report-body-font-size) !important;
+}
+
+/* ==========================================================
+   REPORT HISTORY DROPDOWN — PROPORTIONAL SCALING
+   ========================================================== */
+
+.dropdown-menu {
+  /*
+    Reference: 190px at 1920px viewport
+    13-inch view: approximately 145px
+  */
+  min-width: clamp(145px, 9.896vw, 190px) !important;
+
+  padding: clamp(4px, 0.313vw, 6px) !important;
+  gap: clamp(3px, 0.208vw, 4px) !important;
+
+  border-radius: clamp(10px, 0.833vw, 16px) !important;
+}
+
+.dropdown-item {
+  gap: clamp(7px, 0.521vw, 10px);
+  padding:
+    clamp(7px, 0.521vw, 10px)
+    clamp(10px, 0.729vw, 14px);
+
+  border-radius: clamp(6px, 0.417vw, 8px);
+  font-size: clamp(10.5px, 0.729vw, 14px);
+}
+
+.dropdown-item svg {
+  width: clamp(14px, 0.885vw, 17px);
+  height: clamp(14px, 0.885vw, 17px);
+}
+
+/* ==========================================================
+   DASHBOARD — SHARED PROPORTIONAL LAPTOP / DESKTOP SCALING
+   Reference viewport: 1920 × 1205
+   Keeps the existing Dashboard structure and row ratios.
+   ========================================================== */
+
+
+/* ---------- Main Dashboard frame ---------- */
+
+.dashv2-page {
+  padding:
+    clamp(15px, 1.042vw, 20px)
+    clamp(18px, 1.25vw, 24px);
+
+  /*
+    Keep enough space for the non-scaled Navbar.
+  */
+  padding-top: clamp(90px, 4.948vw, 95px);
+}
+
+.dashv2-body {
+  gap: clamp(12px, 0.833vw, 16px);
+  padding-inline: clamp(15px, 1.042vw, 20px);
+}
+
+
+/* Keep the fixed Dashboard row-gap at 12px.
+   The existing flex-ratio calculations reserve this exact gap. */
+.dashv2-stage {
+  gap: 12px;
+}
+
+
+/* ---------- Shared Dashboard cards ---------- */
+
+.dashv2-card {
+  padding:
+    clamp(12px, 0.833vw, 16px)
+    clamp(15px, 1.042vw, 20px);
+
+  border-radius: clamp(12px, 0.833vw, 16px);
+}
+
+.dashv2-card-header {
+  margin-bottom: clamp(7px, 0.521vw, 10px);
+}
+
+.dashv2-card-title {
+  gap: clamp(6px, 0.469vw, 9px);
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+.dashv2-card-title-icon {
+  width: clamp(21px, 1.458vw, 28px);
+  height: clamp(21px, 1.458vw, 28px);
+  border-radius: clamp(6px, 0.417vw, 8px);
+}
+
+.dashv2-card-badge {
+  padding:
+    clamp(1px, 0.104vw, 2px)
+    clamp(6px, 0.469vw, 9px);
+
+  font-size: clamp(7px, 0.469vw, 9px);
+}
+
+
+/* ---------- Left rail: Triage and Report History ---------- */
+
+.dashv2-rail {
+  gap: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-triage-card {
+  gap: clamp(7px, 0.521vw, 10px);
+}
+
+.dashv2-triage-slogan {
+  font-size: clamp(9px, 0.599vw, 11.5px);
+}
+
+.dashv2-triage-label {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+.dashv2-triage-btn {
+  padding: clamp(7px, 0.469vw, 9px);
+  border-radius: clamp(8px, 0.573vw, 11px);
+  font-size: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-history-card {
+  gap: clamp(7px, 0.521vw, 10px);
+  padding: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-history-row {
+  height: clamp(48px, 3.229vw, 62px);
+  padding-inline: clamp(11px, 0.781vw, 15px);
+  border-radius: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-history-name {
+  font-size: clamp(9.5px, 0.625vw, 12px);
+}
+
+.dashv2-history-sub {
+  font-size: clamp(8px, 0.521vw, 10px);
+}
+
+.dashv2-history-sev-badge {
+  font-size: clamp(7px, 0.469vw, 9px);
+}
+
+
+/* ---------- Safety validation banner ---------- */
+
+.dashv2-banner {
+  padding:
+    clamp(8px, 0.625vw, 12px)
+    clamp(10px, 0.833vw, 16px);
+}
+
+.dashv2-banner-icon {
+  font-size: clamp(14px, 0.938vw, 18px);
+}
+
+.dashv2-banner-title {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+.dashv2-banner-sub {
+  font-size: clamp(8.5px, 0.573vw, 11px);
+}
+
+
+/* ---------- Clinical Summary ---------- */
+
+.dashv2-analysis-card {
+  padding-top: clamp(9px, 0.625vw, 12px);
+  padding-bottom: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-summary-grid > div,
+.dashv2-summary-grid > div:first-child,
+.dashv2-summary-grid > div:last-child {
+  padding-inline: clamp(20px, 1.771vw, 34px);
+}
+
+.dashv2-summary-col-label {
+  font-size: clamp(9px, 0.625vw, 12px);
+  margin-bottom: clamp(8px, 0.625vw, 12px);
+}
+
+.dashv2-summary-severity-val {
+  font-size: clamp(18px, 1.25vw, 24px);
+}
+
+.dashv2-summary-confidence,
+.dashv2-summary-takeaway-text,
+.dashv2-summary-factor-text,
+.dashv2-summary-why-text {
+  font-size: clamp(9.5px, 0.651vw, 12.5px);
+  line-height: 1.35;
+}
+
+.dashv2-summary-factors-list {
+  gap: clamp(4px, 0.313vw, 6px);
+}
+
+.dashv2-summary-full-report-btn {
+  font-size: clamp(9px, 0.625vw, 12px);
+}
+
+
+/* ---------- Care Plan / Trend / Risk row ---------- */
+
+.dashv2-triple-row {
+  gap: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-triple-row > .dashv2-card {
+  padding:
+    clamp(16px, 1.146vw, 22px)
+    clamp(15px, 1.042vw, 20px);
+}
+
+.dashv2-plan-list {
+  font-size: clamp(9.5px, 0.651vw, 12.5px);
+  gap: clamp(4px, 0.313vw, 6px);
+}
+
+.dashv2-mini-card-header {
+  gap: clamp(7px, 0.521vw, 10px);
+  margin-bottom: clamp(10px, 0.729vw, 14px);
+}
+
+.dashv2-mini-card-title {
+  font-size: clamp(11px, 0.729vw, 14px);
+}
+
+.dashv2-trend-val,
+.dashv2-risk-val {
+  font-size: clamp(15px, 1.042vw, 20px);
+}
+
+.dashv2-trend-sub,
+.dashv2-risk-sub {
+  font-size: clamp(8.5px, 0.573vw, 11px);
+}
+
+
+/* ---------- Recommendations / Clinical Picture ---------- */
+
+.dashv2-card-grid {
+  gap: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-card-grid .dashv2-card {
+  padding:
+    clamp(14px, 1.042vw, 20px)
+    clamp(15px, 1.042vw, 20px);
+}
+
+
+/* ---------- Single-report Vitals / Quick Signals ---------- */
+
+.dashv2-vitals-row-card {
+  gap: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-vitals-row-card > div:first-child {
+  padding:
+    clamp(15px, 1.042vw, 20px)
+    clamp(18px, 1.25vw, 24px);
+}
+
+.dashv2-vital-hchip {
+  padding-inline: clamp(9px, 0.729vw, 14px);
+}
+
+.dashv2-vital-hchip-top {
+  grid-template-columns:
+    clamp(20px, 1.302vw, 25px)
+    minmax(0, 1fr);
+
+  column-gap: clamp(4px, 0.313vw, 6px);
+  font-size: clamp(8px, 0.547vw, 10.5px);
+}
+
+.dashv2-vital-hchip-icon {
+  width: clamp(20px, 1.302vw, 25px);
+  height: clamp(20px, 1.302vw, 25px);
+}
+
+.dashv2-vital-hchip-val {
+  font-size: clamp(14px, 0.99vw, 19px);
+}
+
+.dashv2-vital-hchip-val span {
+  font-size: clamp(9px, 0.573vw, 11px);
+}
+
+.dashv2-vital-hchip-badge {
+  padding:
+    clamp(3px, 0.208vw, 4px)
+    clamp(7px, 0.521vw, 10px);
+
+  font-size: clamp(8px, 0.521vw, 10px);
+}
+
+.dashv2-quicksig-label {
+  font-size: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-quicksig-symptom {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+.dashv2-quicksig-val {
+  font-size: clamp(15px, 1.042vw, 20px);
+}
+
+
+/* ---------- Right sidebar vitals ---------- */
+
+.dashv2-vitals-overview-card,
+.dashv2-quicksig-card-tall {
+  padding:
+    clamp(12px, 0.938vw, 18px)
+    clamp(15px, 1.042vw, 20px);
+}
+
+.dashv2-sbvitals-name {
+  font-size: clamp(10px, 0.651vw, 12.5px);
+}
+
+.dashv2-sbvitals-val {
+  font-size: clamp(12px, 0.781vw, 15px);
+}
+
+.dashv2-sbvitals-badge {
+  font-size: clamp(8px, 0.521vw, 10px);
+}
+
+/* ==========================================================
+   DASHBOARD — SINGLE REPORT FINAL CONTENT REFINEMENT
+   Fixes high-specificity Dashboard.css rules on compact views.
+   Does NOT alter grid columns or row-height ratios.
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   LEFT REPORT HISTORY + NEED HELP
+   ---------------------------------------------------------- */
+
+.dashv2-history-viewall {
+  font-size: clamp(9px, 0.625vw, 12px);
+}
+
+.dashv2-history-label {
+  font-size: clamp(8px, 0.521vw, 10px);
+}
+
+.dashv2-support-card {
+  gap: clamp(9px, 0.625vw, 12px);
+  padding:
+    clamp(10px, 0.729vw, 14px)
+    clamp(12px, 0.833vw, 16px);
+}
+
+.dashv2-support-title {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+.dashv2-support-sub {
+  font-size: clamp(8.5px, 0.573vw, 11px);
+}
+
+.dashv2-support-btn {
+  width: clamp(32px, 2.188vw, 42px);
+  height: clamp(32px, 2.188vw, 42px);
+  border-radius: clamp(9px, 0.625vw, 12px);
+}
+
+
+/* ----------------------------------------------------------
+   CLINICAL SUMMARY
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid
+  > div:first-child {
+  padding-right: clamp(20px, 1.771vw, 34px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid
+  > div:last-child {
+  padding-left: clamp(20px, 1.771vw, 34px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-takeaway-text,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-factor-text {
+  font-size: clamp(9px, 0.625vw, 12px);
+  line-height: 1.32;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-full-report-btn {
+  font-size: clamp(8px, 0.547vw, 10.5px);
+  top: clamp(-4px, -0.26vw, -3px);
+}
+
+
+/* ----------------------------------------------------------
+   CARE PLAN / TREND / RISK
+   Keeps cards fixed, but lets long Care Plan text scroll
+   inside its own card rather than getting clipped.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-triple-row
+  > .dashv2-card {
+  padding:
+    clamp(13px, 0.885vw, 17px)
+    clamp(12px, 0.781vw, 15px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list {
+  font-size: clamp(8.5px, 0.573vw, 11px);
+  line-height: 1.35;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list li {
+  padding-left: clamp(10px, 0.729vw, 14px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-mini-card-title {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-trend-val,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-risk-val {
+  font-size: clamp(14px, 0.938vw, 18px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-trend-sub,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-risk-sub {
+  font-size: clamp(8px, 0.521vw, 10px);
+}
+
+
+/* ----------------------------------------------------------
+   RECOMMENDATIONS / CLINICAL PICTURE
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  .dashv2-card {
+  padding:
+    clamp(12px, 0.833vw, 16px)
+    clamp(14px, 0.938vw, 18px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  .dashv2-card p,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  .dashv2-card li {
+  font-size: clamp(9px, 0.625vw, 12px);
+  line-height: 1.38;
+}
+
+
+/* ----------------------------------------------------------
+   VITALS OVERVIEW
+   Overrides the fixed 44 / 28 / 24px vital chip tracks.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip {
+  grid-template-rows:
+    clamp(32px, 2.292vw, 44px)
+    clamp(21px, 1.458vw, 28px)
+    clamp(18px, 1.25vw, 24px);
+
+  gap: clamp(3px, 0.26vw, 5px);
+  padding-inline: clamp(7px, 0.625vw, 12px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-top {
+  grid-template-columns:
+    clamp(20px, 1.302vw, 25px)
+    minmax(0, 1fr);
+
+  height: clamp(32px, 2.292vw, 44px);
+  min-height: clamp(32px, 2.292vw, 44px);
+  column-gap: clamp(4px, 0.313vw, 6px);
+  font-size: clamp(8px, 0.547vw, 10.5px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-icon {
+  width: clamp(20px, 1.302vw, 25px);
+  height: clamp(20px, 1.302vw, 25px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-val {
+  font-size: clamp(14px, 0.99vw, 19px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-val span {
+  font-size: clamp(8px, 0.573vw, 11px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-badge {
+  padding:
+    clamp(2px, 0.208vw, 4px)
+    clamp(6px, 0.469vw, 10px);
+
+  font-size: clamp(7px, 0.469vw, 10px);
+}
+
+
+/* ----------------------------------------------------------
+   QUICK SIGNALS
+   Fixes the cut-off Reported Symptoms label/content.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-card
+  .dashv2-card-header {
+  margin-bottom: clamp(4px, 0.313vw, 7px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-section-top {
+  padding-top: 0;
+  padding-bottom: clamp(4px, 0.313vw, 6px);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-label {
+  font-size: clamp(8.5px, 0.573vw, 11px);
+  margin-bottom: clamp(4px, 0.313vw, 7px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-symptom {
+  font-size: clamp(9px, 0.625vw, 12px);
+  line-height: 1.3;
+  padding-bottom: clamp(4px, 0.313vw, 8px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-grid {
+  padding-block: clamp(6px, 0.521vw, 10px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-val {
+  font-size: clamp(14px, 0.938vw, 18px);
+}
+
+/* ==========================================================
+   DASHBOARD — FOURTH ROW + HISTORY FINAL REFINEMENT
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   FOURTH ROW
+   Keep card sizes and Dashboard row ratios unchanged.
+   Allow only overflowing card content to scroll internally.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  padding-right: clamp(15px, 1.042vw, 20px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 255, 0.28) transparent;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 255, 0.28);
+  border-radius: 999px;
+}
+
+
+/*
+  Fourth-row body typography: slightly more compact.
+  Header/card titles remain unchanged.
+*/
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card
+  p,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card
+  li {
+  font-size: clamp(8.5px, 0.573vw, 11px) !important;
+  line-height: 1.34 !important;
+}
+
+
+/* ----------------------------------------------------------
+   LEFT REPORT HISTORY — final compact text adjustment
+   ---------------------------------------------------------- */
+
+.dashv2-history-name {
+  font-size: clamp(8.5px, 0.573vw, 11px) !important;
+  line-height: 1.22;
+}
+
+.dashv2-history-sub {
+  font-size: clamp(7.5px, 0.495vw, 9.5px) !important;
+  line-height: 1.25;
+}
+
+.dashv2-history-sev-badge {
+  font-size: clamp(6.5px, 0.443vw, 8.5px) !important;
+}
+
+/* ==========================================================
+   DASHBOARD — BOTTOM BREATHING / QUICK SIGNALS / BULLETS
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   FIRST ROW — Safety Validation Banner
+   Creates a small visual breathing area at the bottom without
+   changing the Dashboard row height.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-banner {
+  align-items: center;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-banner
+  .dashv2-banner-body {
+  transform: translateY(-1px);
+}
+
+
+/* ----------------------------------------------------------
+   SECOND ROW — Clinical Summary
+   Lifts internal content by 1px, creating subtle bottom space
+   while retaining the original fixed row ratio.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-analysis-card
+  .dashv2-summary-grid {
+  transform: translateY(-1px);
+}
+
+
+/* ----------------------------------------------------------
+   QUICK SIGNALS
+   Do not scroll Reported Symptoms internally.
+   Keep the label and symptom tags visible as normal content.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-section-top {
+  flex: 0 0 auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+
+  overflow: visible !important;
+  padding-top: 0 !important;
+  padding-bottom: clamp(4px, 0.313vw, 6px) !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-label {
+  display: block;
+  margin-bottom: clamp(4px, 0.313vw, 6px) !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-symptom-tags {
+  gap: clamp(5px, 0.365vw, 7px);
+}
+
+
+/* ----------------------------------------------------------
+   FOURTH ROW — BULLET / NUMBER ALIGNMENT
+   Keeps bullets aligned cleanly with the text body.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card
+  ul,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card
+  ol {
+  margin-left: 0;
+  padding-left: clamp(18px, 1.25vw, 24px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-card-grid
+  > .dashv2-card
+  li {
+  padding-left: clamp(3px, 0.208vw, 4px);
+  list-style-position: outside;
+}
+
+
+/* Care Plan bullets use the same clean text alignment. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list li {
+  padding-left: clamp(11px, 0.781vw, 15px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list li::before {
+  left: 0;
+}
+
+/* ==========================================================
+   DASHBOARD — CARE PLAN / PRIMARY FACTORS ALIGNMENT
+   + VIEW FULL REPORT VISIBILITY
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   CARE PLAN BULLETS
+   Align the bullet with the first text line, including when
+   the Care Plan item wraps onto two lines.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list {
+  gap: clamp(4px, 0.313vw, 6px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list li {
+  padding-left: clamp(11px, 0.781vw, 15px);
+  line-height: 1.34;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list li::before {
+  left: 0;
+  top: 0;
+  line-height: 1.34;
+}
+
+
+/* ----------------------------------------------------------
+   PRIMARY CONTRIBUTING FACTORS
+   Align factor bullet and content text.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-factors-list {
+  gap: clamp(3px, 0.208vw, 5px);
+  margin-bottom: clamp(3px, 0.26vw, 5px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-factor-row {
+  align-items: flex-start;
+  gap: clamp(5px, 0.365vw, 7px);
+
+  font-size: clamp(8.5px, 0.573vw, 11px);
+  line-height: 1.32;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-factor-bullet {
+  font-size: clamp(10px, 0.677vw, 13px);
+  line-height: 1.32;
+  margin-top: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-factor-text {
+  line-height: 1.32;
+}
+
+
+/* ----------------------------------------------------------
+   VIEW FULL REPORT
+   Reserve visible space below Primary Contributing Factors.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid
+  > div:last-child {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid
+  > div:last-child
+  .dashv2-summary-full-report-btn {
+  display: inline-flex !important;
+  flex: 0 0 auto;
+  align-self: flex-start;
+
+  position: static !important;
+  top: auto !important;
+
+  margin-top: clamp(2px, 0.208vw, 4px) !important;
+  margin-bottom: 0 !important;
+
+  gap: clamp(3px, 0.26vw, 5px);
+  font-size: clamp(8px, 0.547vw, 10.5px);
+  line-height: 1.2;
+}
+
+/* ==========================================================
+   DASHBOARD — SUMMARY CHIP / FOURTH ROW / QUICK SIGNALS
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   OVERALL SEVERITY — "Based on 1 report" chip
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-reports-chip {
+  display: inline-flex;
+  align-items: center;
+
+  font-size: clamp(7px, 0.469vw, 9px);
+  line-height: 1.15;
+
+  padding:
+    clamp(2px, 0.156vw, 3px)
+    clamp(5px, 0.365vw, 7px);
+
+  margin-top: clamp(3px, 0.208vw, 4px);
+  white-space: nowrap;
+}
+
+
+/* ----------------------------------------------------------
+   FOURTH ROW — actual inner scrolling container
+   Prevents Personalized Recommendations / Clinical Picture
+   text from being cut off.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-info-list,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-info-list {
+  overflow-y: auto !important;
+  overflow-x: hidden;
+
+  min-height: 0;
+  padding-right: 4px;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 255, 0.28) transparent;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-info-list::-webkit-scrollbar,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-info-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-info-list::-webkit-scrollbar-thumb,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-info-list::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 255, 0.28);
+  border-radius: 999px;
+}
+
+
+/* Fourth-row row alignment and compact typography */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-row,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-row {
+  column-gap: clamp(6px, 0.417vw, 8px);
+  padding-block: clamp(3px, 0.208vw, 5px) !important;
+  align-items: flex-start;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-title,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-title {
+  font-size: clamp(9px, 0.625vw, 12px);
+  line-height: 1.3;
+  margin-bottom: clamp(1px, 0.104vw, 2px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-detail,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-detail {
+  font-size: clamp(8.5px, 0.573vw, 11px);
+  line-height: 1.34;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-inline-note {
+  margin-top: clamp(4px, 0.313vw, 6px);
+  gap: clamp(4px, 0.313vw, 7px);
+
+  padding:
+    clamp(4px, 0.313vw, 6px)
+    clamp(7px, 0.521vw, 10px);
+
+  font-size: clamp(7.5px, 0.495vw, 10px);
+}
+
+
+/* Clinical Picture confidence pills */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-clinical-pill {
+  min-width: clamp(30px, 2.083vw, 40px) !important;
+  padding:
+    clamp(2px, 0.208vw, 4px)
+    clamp(6px, 0.469vw, 11px) !important;
+
+  font-size: clamp(7px, 0.469vw, 10.5px) !important;
+}
+
+
+/* ----------------------------------------------------------
+   QUICK SIGNALS — compact Date / Time area
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-foot
+  .dashv2-quicksig-label {
+  font-size: clamp(8px, 0.521vw, 10px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-foot
+  .dashv2-quicksig-val {
+  font-size: clamp(10px, 0.677vw, 13px);
+  line-height: 1.25;
+}
+
+
+/* ----------------------------------------------------------
+   REPORT HISTORY — one final subtle reduction
+   ---------------------------------------------------------- */
+
+.dashv2-history-name {
+  font-size: clamp(8px, 0.547vw, 10.5px) !important;
+}
+
+.dashv2-history-sub {
+  font-size: clamp(7px, 0.469vw, 9px) !important;
+}
+
+/* ==========================================================
+   DASHBOARD — FINAL BALANCE REFINEMENT
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   REPORT HISTORY
+   Restore readable report name / date / time sizes.
+   ---------------------------------------------------------- */
+
+.dashv2-history-name {
+  font-size: clamp(9px, 0.625vw, 12px) !important;
+  line-height: 1.22;
+}
+
+.dashv2-history-sub {
+  font-size: clamp(8px, 0.521vw, 10px) !important;
+  line-height: 1.25;
+}
+
+
+/* ----------------------------------------------------------
+   OVERALL SEVERITY
+   Move the chip up slightly, providing safe lower clearance.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid
+  > div:first-child
+  .dashv2-summary-reports-chip {
+  position: relative;
+  top: -2px;
+
+  font-size: clamp(7.5px, 0.495vw, 9.5px);
+  line-height: 1.05;
+  padding:
+    clamp(2px, 0.156vw, 3px)
+    clamp(5px, 0.365vw, 7px);
+}
+
+
+/* ----------------------------------------------------------
+   QUICK SIGNALS
+   Give title/Reported Symptoms a clearer separation.
+   Reduce final Date / Time text using the full high-specificity
+   selector so it overrides Dashboard.css final rules.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-card
+  .dashv2-card-header {
+  margin-bottom: clamp(7px, 0.521vw, 10px) !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-foot
+  .dashv2-quicksig-label {
+  font-size: clamp(7px, 0.469vw, 9px) !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-foot
+  .dashv2-quicksig-val {
+  font-size: clamp(9px, 0.573vw, 11px) !important;
+  line-height: 1.2 !important;
+}
+
+
+/* ----------------------------------------------------------
+   FOURTH ROW
+   Relax the previous compact typography slightly while
+   retaining all visible rows and internal scroll protection.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-row,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-row {
+  padding-block: clamp(4px, 0.26vw, 6px) !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-title,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-title {
+  font-size: clamp(9.5px, 0.651vw, 12.5px);
+  line-height: 1.32;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-detail,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-detail {
+  font-size: clamp(9px, 0.625vw, 11.5px);
+  line-height: 1.36;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-inline-note {
+  font-size: clamp(8px, 0.521vw, 10.5px);
+}
+
+/* ==========================================================
+   GLOBAL NAVBAR — PROPORTIONAL LAPTOP / DESKTOP SCALING
+   Reference viewport: 1920 × 1205
+   ========================================================== */
+
+
+/* ---------- Main navigation frame ---------- */
+
+.navbar {
+  height: clamp(73px, 4.948vw, 95px);
+  padding-inline: clamp(29px, 1.979vw, 38px);
+}
+
+
+/* ---------- AegisHealth logo ---------- */
+
+.logo {
+  margin-right: clamp(54px, 3.646vw, 70px);
+  font-size: clamp(18px, 1.25vw, 24px);
+}
+
+
+/* ---------- Main navigation links ---------- */
+
+.nav-links {
+  gap: clamp(41px, 2.813vw, 54px);
+}
+
+.nav-links button,
+.nav-links a button,
+.nav-auth-button {
+  height: clamp(37px, 2.5vw, 48px);
+  padding-inline: clamp(6px, 0.417vw, 8px);
+  border-radius: clamp(14px, 0.938vw, 18px);
+  font-size: clamp(14px, 0.938vw, 18px);
+}
+
+.active-nav {
+  height: clamp(37px, 2.5vw, 48px);
+  padding-inline: clamp(15px, 1.042vw, 20px) !important;
+  border-radius: clamp(14px, 0.938vw, 18px);
+}
+
+
+/* ---------- Right navigation section ---------- */
+
+.nav-right {
+  gap: clamp(10px, 0.729vw, 14px);
+}
+
+.nav-user {
+  gap: clamp(9px, 0.625vw, 12px);
+}
+
+.nav-profile-button {
+  width: clamp(32px, 2.188vw, 42px);
+  height: clamp(32px, 2.188vw, 42px);
+  border-radius: clamp(11px, 0.781vw, 15px);
+}
+
+.nav-profile-button svg {
+  width: clamp(16px, 1.094vw, 21px);
+  height: clamp(16px, 1.094vw, 21px);
+}
+
+
+/* ---------- System Indicator: RAM / CPU ---------- */
+
+.system-indicator {
+  gap: clamp(7px, 0.521vw, 10px);
+}
+
+.resource-group {
+  gap: clamp(2px, 0.156vw, 3px);
+}
+
+.resource-item {
+  grid-template-columns:
+    clamp(24px, 1.667vw, 32px)
+    clamp(42px, 2.865vw, 55px)
+    minmax(clamp(40px, 2.708vw, 52px), auto);
+
+  gap: clamp(4px, 0.313vw, 6px);
+  min-height: clamp(12px, 0.833vw, 16px);
+}
+
+.resource-label {
+  width: clamp(24px, 1.667vw, 32px);
+  font-size: clamp(8px, 0.573vw, 11px);
+}
+
+.resource-bar {
+  min-width: clamp(42px, 2.865vw, 55px);
+  height: clamp(4px, 0.313vw, 6px);
+}
+
+.resource-value {
+  font-size: clamp(9px, 0.625vw, 12px);
+}
+
+.status-dot {
+  width: clamp(6px, 0.417vw, 8px);
+  height: clamp(6px, 0.417vw, 8px);
+}
+
+/* ==========================================================
+   DASHBOARD — NAVBAR SPACE / SUMMARY CHIP / FINAL BALANCE
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Use the extra vertical space created by the compact Navbar.
+   1920px reference → original 95px top spacing
+   1470px viewport  → approximately 75px top spacing
+   ---------------------------------------------------------- */
+
+.dashv2-page {
+  padding-top: clamp(
+    75px,
+    calc(9.667px + 4.444vw),
+    95px
+  );
+}
+
+
+/* ----------------------------------------------------------
+   Overall Severity:
+   Reduce vertical gaps so "Based on 1 report" fits cleanly.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-col-label {
+  margin-bottom: clamp(4px, 0.313vw, 7px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-severity-val {
+  margin-bottom: clamp(4px, 0.313vw, 6px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-confidence {
+  margin-bottom: clamp(2px, 0.156vw, 4px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-reports-chip {
+  top: 0;
+  margin-top: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Fourth row:
+   Restore a little readability without changing the row/card
+   structure. Inner content remains scroll-safe if required.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-title,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-title {
+  font-size: clamp(10px, 0.677vw, 13px);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-actions-card
+  .dashv2-action-detail,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-detail {
+  font-size: clamp(9.5px, 0.651vw, 12px);
+  line-height: 1.34;
+}
+
+
+/* ----------------------------------------------------------
+   Report History:
+   Increase report name and date/time by approximately 1px.
+   ---------------------------------------------------------- */
+
+.dashv2-history-name {
+  font-size: clamp(10px, 0.694vw, 13px) !important;
+}
+
+.dashv2-history-sub {
+  font-size: clamp(9px, 0.59vw, 11px) !important;
+}
+
+/* ==========================================================
+   DASHBOARD — CLINICAL PICTURE / QUICK SIGNALS FINAL TUNING
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Clinical Picture Summary:
+   Give each finding a little more vertical breathing space.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-precautions-card
+  .dashv2-action-row {
+  padding-block: clamp(5px, 0.365vw, 7px) !important;
+}
+
+
+/* ----------------------------------------------------------
+   Quick Signals:
+   Increase gap between Quick Signals heading and
+   Reported Symptoms heading slightly.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-card
+  .dashv2-card-header {
+  margin-bottom: clamp(9px, 0.625vw, 12px) !important;
+}
+
+
+/* ----------------------------------------------------------
+   Last Updated:
+   Label matches Confidence label size.
+   Date/time is intentionally smaller.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-foot
+  .dashv2-quicksig-label {
+  font-size: clamp(8.5px, 0.573vw, 11px) !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card
+  .dashv2-quicksig-foot
+  .dashv2-quicksig-val {
+  font-size: clamp(8px, 0.521vw, 10px) !important;
+  line-height: 1.18 !important;
+}
+
+/* ==========================================================
+   DASHBOARD — UNIFIED CLINICAL BODY TYPOGRAPHY
+   Clinical Picture Summary body size becomes the standard.
+   ========================================================== */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) {
+  --dashboard-clinical-body-size: clamp(9.5px, 0.651vw, 12px);
+}
+
+
+/* Key Clinical Takeaway */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-takeaway-text {
+  font-size: var(--dashboard-clinical-body-size);
+  line-height: 1.34;
+}
+
+
+/* Primary Contributing Factors */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-factor-row,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-factor-text {
+  font-size: var(--dashboard-clinical-body-size);
+  line-height: 1.34;
+}
+
+
+/* Care Plan */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-plan-list li {
+  font-size: var(--dashboard-clinical-body-size);
+  line-height: 1.34;
+}
+
+/* ==========================================================
+   DASHBOARD — FINAL VERTICAL STAGE ALIGNMENT
+   Uses extra space below the compact Navbar.
+   ========================================================== */
+
+
+/*
+  Reference 1920px viewport:
+  → 95px top spacing, original layout remains unchanged
+
+  1470px laptop viewport:
+  → approximately 55px top spacing
+
+  This moves Dashboard content upward and gives the stage
+  more vertical area for every existing fixed row ratio.
+*/
+.dashv2-page {
+  padding-top: clamp(
+    55px,
+    calc(-75.667px + 8.889vw),
+    95px
+  );
+}
+
+
+/*
+  Explicitly keep the final Vitals Overview and Quick Signals
+  cards equal-height and aligned to the same bottom edge.
+*/
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card {
+  align-items: stretch;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > div:first-child,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  .dashv2-quicksig-card {
+  height: 100% !important;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* ==========================================================
+   DASHBOARD — RESTORE TOP SPACING + ROW 4 / ROW 5 ALIGNMENT
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   Restore the earlier, balanced Navbar-to-greeting spacing.
+   ---------------------------------------------------------- */
+
+.dashv2-page {
+  /*
+    1920px reference → 95px
+    1470px viewport  → approximately 75px
+  */
+  padding-top: clamp(
+    75px,
+    calc(9.667px + 4.444vw),
+    95px
+  );
+}
+
+
+/* ----------------------------------------------------------
+   Fourth row must fill its complete allocated Dashboard row.
+   This removes the oversized visual gap before Row 5.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-card-grid {
+  height: 100%;
+  min-height: 0;
+  margin-bottom: 0;
+  align-items: stretch;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-card-grid
+  > .dashv2-card {
+  height: 100% !important;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+
+/* ----------------------------------------------------------
+   Final Vitals / Quick Signals row:
+   make the outer row and both panels consume the identical
+   full available height and end on the same bottom line.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card {
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > div:first-child,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  .dashv2-quicksig-card {
+  height: 100% !important;
+  min-height: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+/* ==========================================================
+   DASHBOARD — SINGLE REPORT ROW 4 / ROW 5 GEOMETRY FIX
+
+   Fixes:
+   - Row 5 left/right edges align with Row 4
+   - Row 5 uses equal two-column card structure
+   - Row 4 cards fill their allocated height
+   - Gap between Row 4 and Row 5 becomes the normal stage gap
+   - Vitals / Quick Signals row consumes remaining available height
+   - Final row reaches the same lower baseline as Need Help rail
+   ========================================================== */
+
+
+/* ----------------------------------------------------------
+   ROW 4 — force both cards to fill their complete grid row
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: minmax(0, 1fr);
+
+  height: 100% !important;
+  min-height: 0;
+  align-items: stretch;
+  margin: 0 !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-card-grid
+  > .dashv2-actions-card,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-card-grid
+  > .dashv2-precautions-card {
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+
+/* ----------------------------------------------------------
+   ROW 5 — force the same outer width and two-column layout
+   as Row 4.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card {
+  width: 100% !important;
+  min-width: 0;
+  min-height: 0;
+
+  /*
+    Same equal-column geometry as Row 4.
+    This aligns the Vitals / Quick Signals split with the
+    Personalized Recommendations / Clinical Picture split.
+  */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+
+  gap: 12px;
+  padding: 0 !important;
+  margin: 0 !important;
+
+  /*
+    Preserve its intended 32% base allocation, then consume
+    any previously unused space at the end of the Dashboard.
+  */
+  flex: 1 1 calc(32% - 15.36px) !important;
+
+  box-sizing: border-box;
+  align-items: stretch;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > div:first-child,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+
+/* ----------------------------------------------------------
+   Keep normal fixed spacing only between Dashboard rows.
+   There should be no extra visual gap after Row 4.
+   ---------------------------------------------------------- */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) {
+  gap: 12px;
+}
+
+/* ==========================================================
+   DASHBOARD — FINAL ROW 70 / 30 SPLIT
+   ========================================================== */
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card {
+  grid-template-columns:
+    minmax(0, 7fr)
+    minmax(0, 3fr) !important;
+}
+
+/* ==========================================================
+   ABOUT — PROPORTIONAL LAPTOP / DESKTOP SCALING
+   Reference viewport: 1920 × 1205
+   ========================================================== */
+
+
+/* ---------- About master frame ---------- */
+
+.about-layout {
+  top: clamp(73px, 4.948vw, 95px);
+  bottom: clamp(38px, 2.604vw, 50px);
+}
+
+.about-master-card {
+  /*
+    1540px at 1920px viewport
+    ~1179px at 1470px viewport
+  */
+  width: clamp(1180px, 80.208vw, 1540px);
+  max-width: 97vw;
+
+  /*
+    1010px at 1205px height
+    ~774px at 923px height
+  */
+  height: clamp(774px, 83.817vh, 1010px);
+  max-height: calc(100dvh - 145px);
+
+  padding:
+    clamp(35px, 2.396vw, 46px)
+    clamp(61px, 4.167vw, 80px);
+
+  gap: clamp(29px, 1.979vw, 38px);
+  border-radius: clamp(29px, 1.875vw, 36px);
+
+  /*
+    It should not scroll in the normal 13-inch layout after
+    proportional scaling. It remains available only as a safe
+    fallback for unusually long user-generated content.
+  */
+  overflow-y: auto;
+}
+
+
+/* ---------- Header / introduction ---------- */
+
+.about-main-title {
+  font-size: clamp(24px, 1.667vw, 32px);
+}
+
+.about-description {
+  font-size: clamp(12px, 0.833vw, 16px);
+  line-height: 1.7;
+}
+
+.section-title {
+  font-size: clamp(18px, 1.25vw, 24px);
+  margin-bottom: clamp(8px, 0.781vw, 15px);
+}
+
+.section-subtitle,
+.mission-description {
+  font-size: clamp(11.5px, 0.781vw, 15px);
+  margin-bottom: clamp(18px, 1.667vw, 32px);
+}
+
+
+/* ---------- Team section ---------- */
+
+.team-grid {
+  gap: clamp(28px, 1.875vw, 36px);
+}
+
+.team-card-inner {
+  border-radius: clamp(16px, 1.354vw, 26px);
+  padding:
+    clamp(23px, 1.563vw, 30px)
+    clamp(21px, 1.458vw, 28px);
+}
+
+.team-card-header {
+  gap: clamp(3px, 0.208vw, 4px);
+  margin-bottom: clamp(11px, 0.938vw, 18px);
+}
+
+.team-avatar {
+  width: clamp(49px, 3.333vw, 64px);
+  height: clamp(49px, 3.333vw, 64px);
+  font-size: clamp(16px, 1.25vw, 24px);
+}
+
+.team-name {
+  font-size: clamp(15px, 1.042vw, 20px);
+}
+
+.team-role {
+  font-size: clamp(10.5px, 0.729vw, 14px);
+}
+
+.team-contribution {
+  font-size: clamp(9.5px, 0.651vw, 13px);
+}
+
+.team-description {
+  font-size: clamp(10px, 0.703vw, 13.5px);
+  line-height: 1.55;
+  margin-bottom: clamp(12px, 1.146vw, 22px);
+}
+
+.team-divider {
+  margin-bottom: clamp(11px, 0.938vw, 18px);
+}
+
+.team-contact {
+  gap: clamp(7px, 0.729vw, 14px);
+}
+
+.contact-item {
+  gap: clamp(7px, 0.521vw, 10px);
+  font-size: clamp(9px, 0.651vw, 12.5px);
+}
+
+.contact-icon-svg {
+  width: clamp(11px, 0.885vw, 17px);
+  height: clamp(11px, 0.885vw, 17px);
+}
+
+
+/* ---------- Mission section ---------- */
+
+.mission-grid {
+  gap: clamp(10px, 1.042vw, 20px);
+  border-radius: clamp(16px, 1.354vw, 26px);
+
+  padding:
+    clamp(17px, 1.458vw, 28px)
+    clamp(17px, 1.458vw, 28px);
+}
+
+.mission-item {
+  gap: clamp(6px, 0.625vw, 12px);
+  padding-inline: clamp(12px, 1.25vw, 24px);
+}
+
+.mission-card-title {
+  gap: clamp(7px, 0.521vw, 10px);
+  font-size: clamp(12px, 0.885vw, 17px);
+}
+
+.mission-icon-svg {
+  width: clamp(14px, 1.146vw, 22px);
+  height: clamp(14px, 1.146vw, 22px);
+}
+
+.mission-card-description {
+  font-size: clamp(10px, 0.703vw, 13.5px);
+  line-height: 1.5;
+}
+
+/* ==========================================================
+   ABOUT — FOOTER CLEARANCE
+   Adds a subtle visual gap above the privacy footer.
+   ========================================================== */
+
+.about-layout {
+  bottom: clamp(48px, 3.125vw, 60px);
+}
+
+.dashv2-history-row {
+  height: clamp(42px, 2.8vw, 54px) !important;
+  padding-inline: clamp(9px, 0.65vw, 12px) !important;
+}
+
+.dashv2-summary-takeaway-text,
+.dashv2-summary-factor-text,
+.dashv2-summary-why-text,
+.dashv2-plan-list,
+.dashv2-vital-hchip-top,
+.dashv2-quicksig-label,
+.dashv2-quicksig-symptom,
+.dashv2-summary-factor-row,
+.dashv2-quicksig-val,
+.dashv2-card-grid .dashv2-card p,
+.dashv2-card-grid .dashv2-card li {
+  font-size: clamp(8px, 0.53vw, 10.5px) !important;
+  line-height: 1.32 !important;
+}
+
+.report-right-card .report-text-container {
+  font-size: clamp(10.5px, 0.7vw, 13.5px) !important;
+}
+.report-right-card .report-text-container h1,
+.report-right-card .report-text-container h2,
+.report-right-card .report-text-container h3,
+.report-right-card .report-text-container h4 {
+  margin-bottom: clamp(8px, 0.58vw, 11px) !important;
+}
+.report-right-card .report-text-container p,
+.report-right-card .report-text-container li:not(.vital-line):not(.vital-line-plain) {
+  font-size: clamp(10.5px, 0.7vw, 13.5px) !important;
+  line-height: 1.55 !important;
+}
+
+.report-right-card .report-text-container ul.findings-list li.vital-line,
+.report-right-card .report-text-container ul.findings-list li.vital-line-plain {
+  font-size: clamp(9.8px, 0.68vw, 13px) !important;
+  line-height: 1.5 !important;
+  margin-block: clamp(3px, 0.25vw, 5px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div:nth-child(2) span {
+  font-size: clamp(8px, 0.53vw, 10.5px) !important;
+}
+
+.dashv2-card-grid .dashv2-card li {
+  font-size: clamp(8px, 0.53vw, 10.5px) !important;
+  line-height: 1.32 !important;
+}
+
+.report-right-card .report-text-container {
+  font-size: clamp(10.5px, 0.7vw, 13.5px) !important;
+}
+.report-right-card .report-text-container h1,
+.report-right-card .report-text-container h2,
+.report-right-card .report-text-container h3,
+.report-right-card .report-text-container h4 {
+  margin-bottom: clamp(8px, 0.58vw, 11px) !important;
+}
+.report-right-card .report-text-container p,
+.report-right-card .report-text-container li:not(.vital-line):not(.vital-line-plain) {
+  font-size: clamp(10.5px, 0.7vw, 13.5px) !important;
+  line-height: 1.55 !important;
+}
+
+.report-right-card .report-text-container ul.findings-list li.vital-line,
+.report-right-card .report-text-container ul.findings-list li.vital-line-plain {
+  font-size: clamp(9.8px, 0.68vw, 13px) !important;
+  line-height: 1.5 !important;
+  margin-block: clamp(3px, 0.25vw, 5px) !important;
+}
+
+.report-right-card .right-card-fixed-top > div:nth-child(2) span {
+  font-size: clamp(8px, 0.53vw, 10.5px) !important;
+}
+
+} /* end @media (max-width: 1919px) */
+
+/* ==========================================================
+   FIX OVERRIDE — Layout balance, larger fonts, even gaps
+   Appended after previous override. Keeps 15-inch untouched.
+   ========================================================== */
+@media (max-width: 1919px) {
+
+.dashv2-summary-takeaway-text {
+  font-size: clamp(11px, 0.72vw, 14px) !important;
+  line-height: 1.42 !important;
+}
+
+.dashv2-summary-factor-row,
+.dashv2-summary-factor-text {
+  font-size: clamp(11px, 0.72vw, 14px) !important;
+  line-height: 1.42 !important;
+}
+
+.dashv2-plan-list,
+.dashv2-plan-list li {
+  font-size: clamp(11px, 0.72vw, 14px) !important;
+  line-height: 1.42 !important;
+  gap: clamp(6px, 0.42vw, 10px) !important;
+}
+
+.dashv2-card-grid .dashv2-card p,
+.dashv2-card-grid .dashv2-card li {
+  font-size: clamp(11.5px, 0.78vw, 15px) !important;
+  line-height: 1.55 !important;
+}
+
+.dashv2-quicksig-label {
+  font-size: clamp(11px, 0.72vw, 14px) !important;
+  margin-bottom: clamp(6px, 0.42vw, 10px) !important;
+}
+.dashv2-quicksig-symptom {
+  font-size: clamp(12px, 0.8vw, 15px) !important;
+  line-height: 1.4 !important;
+}
+.dashv2-quicksig-val {
+  font-size: clamp(16px, 1.05vw, 20px) !important;
+  line-height: 1.2 !important;
+}
+.dashv2-quicksig-foot .dashv2-quicksig-val {
+  font-size: clamp(15px, 1.0vw, 19px) !important;
+}
+
+.dashv2-quicksig-card-tall .dashv2-quicksig-section-top,
+.dashv2-quicksig-card-tall .dashv2-quicksig-section-mid,
+.dashv2-quicksig-card-tall .dashv2-quicksig-section-bottom {
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid-body {
+  overflow-y: visible !important;
+  min-height: auto !important;
+}
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid-body td,
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid-body th {
+  font-size: clamp(11px, 0.7vw, 13.5px) !important;
+  padding: 8px 10px !important;
+}
+
+.dashv2-vital-hchip-top {
+  font-size: clamp(9px, 0.6vw, 12px) !important;
+}
+.dashv2-vital-hchip-val {
+  font-size: clamp(15px, 1.0vw, 19px) !important;
+}
+.dashv2-vital-hchip-val span {
+  font-size: clamp(10px, 0.65vw, 13px) !important;
+}
+.dashv2-vital-hchip-badge {
+  font-size: clamp(9px, 0.6vw, 12px) !important;
+  padding: clamp(3px, 0.25vw, 5px) clamp(6px, 0.45vw, 10px) !important;
+}
+
+.dashv2-analysis-card,
+.dashv2-triple-row,
+.dashv2-card-grid,
+.dashv2-vitals-row-card {
+  gap: 14px !important;
+}
+.dashv2-triple-row > .dashv2-card,
+.dashv2-card-grid .dashv2-card {
+  padding: clamp(14px, 1.0vw, 20px) !important;
+}
+
+.dashv2-history-row {
+  height: clamp(52px, 3.3vw, 64px) !important;
+  padding-inline: clamp(12px, 0.85vw, 16px) !important;
+}
+
+/* 2nd row — prevent cut-off in Clinical Summary */
+.dashv2-analysis-card {
+  overflow-y: auto !important;
+  min-height: 0 !important;
+}
+.dashv2-analysis-section {
+  margin-bottom: 10px !important;
+}
+
+/* 3rd row — even spacing for Care Plan / Trend / Risk Profile */
+.dashv2-triple-row {
+  gap: 14px !important;
+}
+.dashv2-triple-row > .dashv2-card {
+  padding: clamp(12px, 0.85vw, 18px) !important;
+}
+
+/* 4th row — prevent dense/cut text in Recommendations & Clinical Picture */
+.dashv2-card-grid .dashv2-card p,
+.dashv2-card-grid .dashv2-card li {
+  font-size: clamp(11.5px, 0.78vw, 15px) !important;
+  line-height: 1.55 !important;
+  margin-bottom: 6px !important;
+}
+.dashv2-card-grid .dashv2-card {
+  overflow-y: auto !important;
+}
+
+/* 5th row — 7 comparison rows fully visible */
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) {
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 32% !important;
+}
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid-body {
+  overflow-y: visible !important;
+  min-height: auto !important;
+  flex: 1 1 auto !important;
+}
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid-body td,
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid-body th {
+  font-size: clamp(11px, 0.7vw, 13.5px) !important;
+  padding: 8px 10px !important;
+  white-space: nowrap !important;
+}
+
+/* Vitals Overview — 8 items spacing */
+.dashv2-vital-hchip {
+  gap: 3px !important;
+  padding-inline: clamp(9px, 0.7vw, 14px) !important;
+}
+.dashv2-vital-hchip-top {
+  height: auto !important;
+  min-height: clamp(32px, 2.2vw, 44px) !important;
+}
+.dashv2-vital-hchip-val {
+  font-size: clamp(15px, 1.0vw, 19px) !important;
+}
+
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) {
+  flex: 0 0 auto !important;
+  overflow-y: visible !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
+}
+.dashv2-comparison-grid-body {
+  overflow-y: visible !important;
+  min-height: auto !important;
+  flex: 1 1 auto !important;
+}
+.dashv2-stage {
+  gap: 12px !important;
+}
+
+/* ==========================================================
+   FINAL PASS — Report History box sizing + card content density
+   Applies to BOTH single-report and multi-report dashboard states.
+   Card outer layout/sizing is untouched; only inner content/fonts
+   and the history row's height/padding are adjusted.
+
+   UNIVERSAL SCALING NOTE:
+   Coefficients are calibrated against logical (CSS) viewport width,
+   not physical screen inches — inches alone don't map to a fixed
+   viewport width because Mac (Retina "looks like" scaling) and
+   Windows (100%/125%/150% DPI scaling) report very different
+   logical widths for the same physical panel size. This scale is
+   tuned so it degrades gracefully across the full practical range
+   seen on real 13"–16"+ laptops on both platforms:
+     ~1280px  → smallest common case (13" MacBook Air/Pro @ default)
+     ~1512px  → 14" MacBook Pro @ default scaling
+     ~1728px  → 16" MacBook Pro @ default scaling
+     ~1920px  → most common Windows laptop panel, any size 13"–16"
+     ~2560px  → larger/high-res Windows panels, Mac at non-default scaling
+   Below 1280px it holds at MIN (no real laptop goes smaller); above
+   2560px it holds at MAX. Everything in between interpolates
+   continuously via vw, so 14" and 16" (not just 13"/15") also adjust
+   correctly instead of being lumped in with a neighboring breakpoint.
+   ========================================================== */
+
+/* Report History — shorten the background box (single + multi report) */
+.dashv2-history-row {
+  height: clamp(38px, 2.188vw, 56px) !important;
+  min-height: clamp(38px, 2.188vw, 56px) !important;
+  max-height: clamp(38px, 2.188vw, 56px) !important;
+  padding-inline: clamp(10px, 0.6vw, 15px) !important;
+}
+.dashv2-history-file-icon {
+  width: clamp(27px, 1.484vw, 38px) !important;
+  height: clamp(27px, 1.484vw, 38px) !important;
+}
+.dashv2-history-name {
+  font-size: clamp(11px, 0.527vw, 13.5px) !important;
+  line-height: 1.25 !important;
+}
+.dashv2-history-sub {
+  font-size: clamp(9.5px, 0.449vw, 11.5px) !important;
+}
+.dashv2-history-sev-badge {
+  font-size: clamp(8px, 0.391vw, 10px) !important;
+  padding: clamp(2px, 0.117vw, 3px) clamp(7px, 0.391vw, 10px) !important;
+}
+.dashv2-history-list {
+  gap: clamp(6px, 0.313vw, 9px) !important;
+}
+
+/* Card content — reduce density/fonts so text isn't cramped,
+   without altering card dimensions or grid layout */
+.dashv2-card {
+  padding: clamp(11px, 0.664vw, 17px) clamp(13px, 0.82vw, 21px) !important;
+}
+.dashv2-card-title {
+  font-size: clamp(11.5px, 0.586vw, 15px) !important;
+  gap: clamp(6px, 0.352vw, 9px) !important;
+}
+.dashv2-card-title-icon {
+  width: clamp(22px, 1.172vw, 30px) !important;
+  height: clamp(22px, 1.172vw, 30px) !important;
+}
+.dashv2-card-header {
+  margin-bottom: clamp(6px, 0.43vw, 11px) !important;
+}
+.dashv2-card-badge {
+  font-size: clamp(7px, 0.371vw, 9.5px) !important;
+  padding: clamp(1.5px, 0.098vw, 2px) clamp(6px, 0.352vw, 9px) !important;
+}
+
+/* Clinical Summary — tighten paragraph/label sizing */
+.dashv2-summary-col-label {
+  font-size: clamp(10px, 0.488vw, 12.5px) !important;
+  margin-bottom: clamp(6px, 0.43vw, 12px) !important;
+}
+.dashv2-summary-severity-val {
+  font-size: clamp(17px, 0.977vw, 25px) !important;
+  margin-bottom: clamp(6px, 0.352vw, 10px) !important;
+}
+.dashv2-summary-confidence {
+  font-size: clamp(10px, 0.488vw, 12.5px) !important;
+  margin-bottom: clamp(6px, 0.352vw, 10px) !important;
+}
+.dashv2-summary-takeaway-text {
+  font-size: clamp(10px, 0.508vw, 13px) !important;
+  line-height: 1.45 !important;
+  margin-bottom: clamp(6px, 0.43vw, 12px) !important;
+}
+.dashv2-summary-why {
+  padding: clamp(6px, 0.43vw, 11px) clamp(8px, 0.508vw, 13px) !important;
+}
+.dashv2-summary-factors-list {
+  gap: clamp(5px, 0.313vw, 8px) !important;
+  margin-bottom: clamp(7px, 0.508vw, 14px) !important;
+}
+.dashv2-summary-factor-row,
+.dashv2-summary-factor-text {
+  font-size: clamp(10px, 0.488vw, 12.5px) !important;
+  line-height: 1.4 !important;
+}
+
+/* Care Plan / Trend / Risk Profile — tighter, consistent inner spacing */
+.dashv2-triple-row > .dashv2-card {
+  padding: clamp(11px, 0.664vw, 18px) clamp(13px, 0.703vw, 18px) !important;
+}
+.dashv2-mini-card-header {
+  margin-bottom: clamp(7px, 0.469vw, 12px) !important;
+}
+.dashv2-mini-card-title {
+  font-size: clamp(11.5px, 0.586vw, 15px) !important;
+}
+.dashv2-trend-val,
+.dashv2-risk-val {
+  font-size: clamp(15px, 0.82vw, 21px) !important;
+  margin: clamp(1px, 0.078vw, 2px) 0 clamp(3px, 0.156vw, 4px) !important;
+}
+.dashv2-trend-sub,
+.dashv2-risk-sub {
+  font-size: clamp(9px, 0.449vw, 11.5px) !important;
+}
+.dashv2-plan-list {
+  font-size: clamp(10px, 0.488vw, 12.5px) !important;
+  gap: clamp(4px, 0.234vw, 6px) !important;
+}
+
+/* Personalized Recommendations / Clinical Picture Summary — denser text fix */
+.dashv2-card-grid .dashv2-card p,
+.dashv2-card-grid .dashv2-card li,
+.clinical-picture-row {
+  font-size: clamp(10px, 0.508vw, 13px) !important;
+  line-height: 1.5 !important;
+  margin-bottom: clamp(4px, 0.234vw, 6px) !important;
+}
+
+/* Vitals Overview strip + Quick Signals — tighter figures */
+.dashv2-vital-hchip-val {
+  font-size: clamp(13.5px, 0.742vw, 19px) !important;
+}
+.dashv2-vital-hchip-top {
+  font-size: clamp(8.5px, 0.469vw, 12px) !important;
+}
+.dashv2-quicksig-label {
+  font-size: clamp(9.5px, 0.469vw, 12px) !important;
+}
+.dashv2-quicksig-symptom {
+  font-size: clamp(10.5px, 0.527vw, 13.5px) !important;
+  line-height: 1.4 !important;
+}
+.dashv2-quicksig-val {
+  font-size: clamp(13.5px, 0.742vw, 19px) !important;
+}
+
+/* Severity & Vitals Comparison table — compact cell text */
+.dashv2-comp-head,
+.dashv2-comp-param,
+.dashv2-comp-prev,
+.dashv2-comp-cur,
+.dashv2-comp-change,
+.dashv2-comp-status-cell {
+  font-size: clamp(9.5px, 0.469vw, 12px) !important;
+}
+.dashv2-comparison-grid-row {
+  padding: clamp(2.5px, 0.156vw, 3.5px) 0 !important;
+}
+
+}
+
+
+
+/* ==========================================================
+   DYNAMIC RESPONSIVE ADJUSTMENTS (13-INCH SCREEN FOCUS)
+   ========================================================== */
+@media (max-width: 1919px) {
+
+  /* ----------------------------------------------------------
+     1. REPORT HISTORY (LEFT SIDEBAR) — LOCKED
+     Kept exactly as is from your previous confirmation.
+     ---------------------------------------------------------- */
+  .dashv2-history-row {
+    height: clamp(44px, 2.8vw, 56px) !important;
+    min-height: clamp(44px, 2.8vw, 56px) !important;
+    max-height: clamp(44px, 2.8vw, 56px) !important;
+    padding-inline: clamp(12px, 0.75vw, 16px) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+  
+  .dashv2-history-row-active,
+  .dashv2-history-row:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(37, 99, 255, 0.25) !important;
+  }
+
+  .dashv2-history-file-icon {
+    width: clamp(26px, 1.5vw, 34px) !important;
+    height: clamp(26px, 1.5vw, 34px) !important;
+    border-radius: clamp(6px, 0.35vw, 9px) !important;
+    background: rgba(37, 99, 255, 0.12) !important;
+  }
+
+  .dashv2-history-file-icon svg {
+    width: clamp(12.5px, 0.7vw, 16px) !important;
+    height: clamp(12.5px, 0.7vw, 16px) !important;
+  }
+
+  .dashv2-history-left {
+    gap: clamp(8px, 0.5vw, 12px) !important;
+  }
+
+  .dashv2-history-name {
+    font-size: clamp(11px, 0.6vw, 13.5px) !important;
+    font-weight: 600 !important;
+  }
+
+  .dashv2-history-sub {
+    font-size: clamp(8.5px, 0.5vw, 10.5px) !important;
+  }
+
+  .dashv2-history-sev-badge {
+    font-size: clamp(7.5px, 0.4vw, 9px) !important;
+    padding: clamp(1.5px, 0.08vw, 2.5px) clamp(5px, 0.3vw, 8px) !important;
+  }
+
+  .dashv2-history-list {
+    gap: clamp(6px, 0.35vw, 10px) !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     2. SAFETY VALIDATION BANNER
+     Centered vertically and added padding/margin bottom to align row.
+     ---------------------------------------------------------- */
+  .dashv2-stage > .dashv2-banner {
+    display: flex !important;
+    align-items: center !important;
+    padding-top: clamp(6px, 0.4vw, 10px) !important;
+    padding-bottom: clamp(6px, 0.4vw, 10px) !important;
+    margin-bottom: clamp(4px, 0.25vw, 8px) !important;
+  }
+
+  .dashv2-banner-body {
+    justify-content: center !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     3. CLINICAL SUMMARY (PRIMARY CONTRIBUTING FACTORS & CARE PLAN)
+     Perfect vertical alignment of bullet points and text first lines.
+     ---------------------------------------------------------- */
+  .dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-analysis-card {
+    padding-top: clamp(6px, 0.4vw, 10px) !important;
+    padding-bottom: clamp(2px, 0.15vw, 5px) !important;
+  }
+
+  .dashv2-summary-col-label {
+    margin-bottom: clamp(2px, 0.1vw, 4px) !important;
+  }
+
+  .dashv2-summary-takeaway-text {
+    margin-bottom: clamp(2px, 0.1vw, 4px) !important;
+  }
+
+  .dashv2-summary-factors-list {
+    gap: clamp(3px, 0.18vw, 5.5px) !important; /* Unified dynamic gap between list points */
+    margin-bottom: clamp(1px, 0.08vw, 3px) !important;
+  }
+
+  .dashv2-summary-factor-row {
+    display: flex !important;
+    align-items: flex-start !important; /* Keeps bullet point natively positioned */
+    line-height: 1.35 !important;
+  }
+
+  .dashv2-summary-factor-bullet {
+    display: inline-block !important;
+    line-height: 1 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important; /* Locked exactly where it sits natively */
+  }
+
+  .dashv2-summary-factor-text {
+    display: inline-block !important;
+    font-size: clamp(9px, 0.48vw, 11px) !important;
+    line-height: 1.35 !important;
+    margin-top: clamp(1.5px, 0.1vw, 2.5px) !important; /* Pulls the body text down to center with native bullet glyph */
+    margin-bottom: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding: 0 !important;
+  }
+
+  .dashv2-summary-full-report-btn {
+    margin-top: clamp(4px, 0.28vw, 7px) !important; /* Dynamic gap above button */
+    margin-bottom: 0 !important;
+    font-size: clamp(8.5px, 0.48vw, 10.5px) !important;
+    transform: none !important;
+    position: relative !important;
+    top: 0 !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     4. PERSONALIZED RECOMMENDATIONS & CLINICAL PICTURE SUMMARY
+     Unified padding-block, title margin and margins to make gaps identical.
+     ---------------------------------------------------------- */
+  .dashv2-actions-card .dashv2-action-row,
+  .dashv2-precautions-card .dashv2-action-row {
+    column-gap: clamp(5px, 0.3vw, 8px) !important;
+    padding-block: clamp(2px, 0.15vw, 4px) !important;
+    margin-bottom: clamp(3px, 0.2vw, 6px) !important;
+    align-items: flex-start !important;
+  }
+
+  .dashv2-actions-card .dashv2-action-title,
+  .dashv2-precautions-card .dashv2-action-title {
+    font-size: clamp(9.5px, 0.55vw, 11px) !important;
+    line-height: 1.35 !important;
+    margin-bottom: 2px !important;
+  }
+
+  .dashv2-actions-card .dashv2-action-detail,
+  .dashv2-precautions-card .dashv2-action-detail,
+  .clinical-picture-row {
+    font-size: clamp(9px, 0.5vw, 10.5px) !important;
+    line-height: 1.4 !important;
+  }
+
+  .dashv2-actions-card .dashv2-action-copy,
+  .dashv2-precautions-card .dashv2-action-copy {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Override inline styling on row indices/numbers */
+  .dashv2-actions-card .dashv2-action-row > span[style],
+  .dashv2-precautions-card .dashv2-action-row > span[style] {
+    font-size: clamp(9.5px, 0.55vw, 11px) !important;
+    font-weight: 600 !important;
+  }
+
+  .dashv2-actions-card .dashv2-inline-note {
+    margin-top: clamp(3px, 0.18vw, 5px) !important;
+    padding: clamp(2.5px, 0.15vw, 4px) clamp(5px, 0.3vw, 8px) !important;
+    font-size: clamp(8px, 0.42vw, 9.5px) !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     5. SEVERITY & VITALS COMPARISON TABLE
+     Decreased row gap to exactly 4.7px for custom layout density,
+     and adjusted flex-basis by 0.5% to prevent bottom edge overflow clipping.
+     ---------------------------------------------------------- */
+  .dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) {
+    padding: clamp(8px, 0.5vw, 12px) clamp(10px, 0.65vw, 15px) !important;
+    flex: 0 0 calc(31% - 15.12px) !important; /* Squeezes down slightly to prevent stage overflow */
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+  }
+
+  .dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-card-header {
+    margin-bottom: clamp(3px, 0.2vw, 6px) !important;
+  }
+
+  .dashv2-comparison-grid {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    justify-content: flex-start !important;
+  }
+
+  .dashv2-comparison-grid-head {
+    padding-bottom: clamp(3px, 0.2vw, 5px) !important;
+    margin-bottom: clamp(1px, 0.08vw, 3px) !important;
+  }
+
+  .dashv2-comparison-grid-body {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    justify-content: flex-start !important;
+    gap: 0 !important; /* Enforces absolute spacing by row padding alone */
+  }
+
+  .dashv2-comparison-grid-row {
+    padding: 4.7px 0 !important; /* EXACTLY 4.7px padding gap! */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .dashv2-comp-status-badge {
+    font-size: clamp(8px, 0.42vw, 10px) !important;
+    padding: clamp(1px, 0.05vw, 2px) clamp(4px, 0.25vw, 6px) !important;
+    border-radius: clamp(3px, 0.2vw, 5px) !important;
+    display: inline-block !important;
+    white-space: nowrap !important;
+  }
+
+  .dashv2-comp-head,
+  .dashv2-comp-param,
+  .dashv2-comp-prev,
+  .dashv2-comp-cur,
+  .dashv2-comp-change,
+  .dashv2-comp-status-cell {
+    font-size: clamp(8.5px, 0.45vw, 11px) !important;
+    line-height: 1.25 !important;
+  }
+
+  .dashv2-comparison-caption {
+    margin-top: clamp(2px, 0.12vw, 5px) !important;
+    font-size: clamp(8.5px, 0.45vw, 10px) !important;
+    line-height: 1.25 !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     6. VITALS OVERVIEW & QUICK SIGNALS (RIGHT SIDEBAR) — LOCKED & BALANCED
+     Evenly spaced vitals reaching cleanly to the card's lower boundary,
+     with breathing space above Normal title so it doesn't touch the line.
+     ---------------------------------------------------------- */
+  .dashv2-vitals-overview-card {
+    padding: clamp(10px, 0.6vw, 14px) clamp(12px, 0.75vw, 16px) !important;
+    flex: 0 0 calc(67% - 8px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  .dashv2-sidebar > .dashv2-quicksig-card-tall {
+    flex: 0 0 calc(33% - 4px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    border-radius: 16px !important;
+  }
+
+  .dashv2-sbvitals-scroll {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    min-height: 0 !important;
+    overflow-y: hidden !important;
+  }
+
+  .dashv2-sbvitals-group-label {
+    margin: 0 !important;
+    font-size: clamp(9px, 0.5vw, 11.5px) !important;
+  }
+
+  .dashv2-sbvitals-scroll > .dashv2-sbvitals-group-label {
+    padding-top: clamp(6px, 0.4vw, 10px) !important; /* Space away from the border-top divider line! */
+  }
+
+  .dashv2-sbvitals-scroll > .dashv2-sbvitals-group-label:first-child {
+    padding-top: 0 !important; /* First header has no line, stays at 0 */
+  }
+
+  .dashv2-sbvitals-row {
+    padding: clamp(3px, 0.2vw, 5.5px) clamp(2px, 0.1vw, 4px) !important;
+    gap: clamp(8px, 0.45vw, 12px) !important;
+    margin-bottom: 0 !important;
+    border-radius: clamp(6px, 0.35vw, 8px) !important;
+  }
+
+  .dashv2-sbvitals-icon {
+    width: clamp(24px, 1.3vw, 30px) !important;
+    height: clamp(24px, 1.3vw, 30px) !important;
+    border-radius: clamp(5px, 0.25vw, 7px) !important;
+    font-size: clamp(10px, 0.55vw, 12px) !important;
+  }
+
+  .dashv2-sbvitals-name {
+    font-size: clamp(10px, 0.55vw, 12.5px) !important;
+    margin-bottom: 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  .dashv2-sbvitals-val {
+    font-size: clamp(11.5px, 0.65vw, 14.5px) !important;
+    line-height: 1.2 !important;
+  }
+
+  .dashv2-sbvitals-badge {
+    font-size: clamp(8px, 0.4vw, 9.5px) !important;
+    padding: clamp(2px, 0.1vw, 3px) clamp(6px, 0.4vw, 10px) !important;
+    border-radius: clamp(3px, 0.18vw, 5px) !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     7. FORM LAYOUTS (PROFILE modal, PROFILE SETUP, CREATE ACCOUNT)
+     Compacted vertical padding, field gap, and dimensions so they fit
+     perfectly without scrollbars on compact displays.
+     ---------------------------------------------------------- */
+  
+  /* Setup page card — Softened contrast, with spacious breathing gaps */
+  .profile-setup-container {
+    top: clamp(60px, 4.5vw, 95px) !important;
+    bottom: clamp(40px, 3.5vw, 80px) !important;
+  }
+  .profile-setup-card {
+    border-radius: clamp(16px, 1.2vw, 24px) !important;
+    padding: clamp(24px, 2.5vw, 44px) clamp(28px, 3vw, 52px) !important; /* Generous, spacious card padding */
+    width: clamp(520px, 45vw, 760px) !important;
+    
+    /* Low-contrast theme overrides */
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.05) !important;
+  }
+  .profile-setup-heading {
+    margin-bottom: clamp(18px, 1.5vw, 32px) !important; /* Generous title margin */
+  }
+  .profile-setup-step {
+    margin-bottom: clamp(4px, 0.3vw, 8px) !important;
+    font-size: clamp(11px, 0.65vw, 12.5px) !important;
+  }
+  .profile-setup-heading h1 {
+    font-size: clamp(22px, 1.6vw, 28px) !important;
+    margin: 0 0 clamp(8px, 0.6vw, 14px) 0 !important; /* Generous title gap */
+  }
+  .profile-setup-heading p {
+    font-size: clamp(12.5px, 0.8vw, 14.5px) !important;
+    line-height: 1.45 !important;
+  }
+
+  /* Profile Edit Modal */
+  .profile-modal-overlay {
+    padding: clamp(12px, 1vw, 24px) !important;
+  }
+  .profile-modal-card {
+    width: min(720px, calc(100vw - 32px)) !important;
+    max-height: calc(100vh - 40px) !important;
+    border-radius: clamp(16px, 1.2vw, 24px) !important;
+  }
+  .profile-modal-header {
+    padding: clamp(14px, 1vw, 20px) clamp(22px, 1.6vw, 32px) clamp(10px, 0.8vw, 14px) !important;
+  }
+  .profile-modal-header h2 {
+    font-size: clamp(18px, 1.3vw, 22px) !important;
+    margin: 0 0 2px 0 !important;
+  }
+  .profile-modal-header p {
+    font-size: clamp(11px, 0.7vw, 12px) !important;
+  }
+  .profile-modal-close {
+    width: clamp(28px, 2vw, 32px) !important;
+    height: clamp(28px, 2vw, 32px) !important;
+    border-radius: clamp(6px, 0.4vw, 9px) !important;
+    font-size: clamp(13px, 0.9vw, 16px) !important;
+  }
+  .profile-modal-scroll {
+    padding: clamp(12px, 1vw, 18px) clamp(22px, 1.6vw, 32px) clamp(14px, 1.1vw, 22px) !important;
+  }
+
+  /* Form Fields spacing (Increased label-to-input gap by 1px) */
+  .profile-form-grid {
+    gap: clamp(8px, 0.5vw, 12px) !important;
+  }
+  .profile-setup-card .profile-form-grid {
+    gap: clamp(14px, 1vw, 22px) !important; /* Spacious, comfortable grid gaps for the full-page setup form */
+  }
+  
+  .profile-field {
+    gap: clamp(3px, 0.2vw, 5px) !important; /* Increased label-to-input gap by 1px for modal */
+  }
+  .profile-setup-card .profile-field {
+    gap: clamp(6px, 0.4vw, 10px) !important; /* Generous, comfortable gaps between title label and input on setup page */
+  }
+  
+  .profile-field > span {
+    font-size: clamp(10px, 0.6vw, 11.5px) !important;
+  }
+  .profile-field input,
+  .profile-field select {
+    height: clamp(32px, 2.2vw, 38px) !important;
+    border-radius: clamp(8px, 0.6vw, 11px) !important;
+    font-size: clamp(11.5px, 0.75vw, 13px) !important;
+    padding: 0 clamp(12px, 0.8vw, 16px) 0 clamp(28px, 2vw, 34px) !important;
+  }
+  
+  /* Soften fields inside the setup page to match the low-contrast card */
+  .profile-setup-card .profile-field input,
+  .profile-setup-card .profile-field select,
+  .profile-setup-card .profile-field textarea {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+  }
+  .profile-setup-card .profile-field input:focus,
+  .profile-setup-card .profile-field select:focus,
+  .profile-setup-card .profile-field textarea:focus {
+    background: rgba(255, 255, 255, 0.16) !important;
+    border-color: #2563ff !important;
+  }
+
+  .profile-field select {
+    background-position:
+      calc(100% - 14px) 50%,
+      calc(100% - 10px) 50% !important;
+  }
+  .profile-field textarea {
+    min-height: clamp(32px, 2.2vw, 38px) !important;
+    height: clamp(32px, 2.2vw, 38px) !important;
+    border-radius: clamp(8px, 0.6vw, 11px) !important;
+    font-size: clamp(11.5px, 0.75vw, 13px) !important;
+    padding: clamp(6px, 0.4vw, 10px) clamp(12px, 0.8vw, 16px) clamp(6px, 0.4vw, 10px) clamp(28px, 2vw, 34px) !important;
+  }
+  .profile-field-icon {
+    left: clamp(10px, 0.6vw, 13px) !important;
+    font-size: clamp(11px, 0.7vw, 13px) !important;
+  }
+  .profile-field-icon.profile-textarea-icon {
+    top: clamp(8px, 0.5vw, 11px) !important;
+  }
+  .profile-form-actions {
+    margin-top: clamp(10px, 0.8vw, 16px) !important;
+  }
+  .profile-setup-card .profile-form-actions {
+    margin-top: clamp(18px, 1.5vw, 32px) !important; /* Generous action button margin for setup page */
+  }
+  .profile-primary-button,
+  .profile-secondary-button {
+    min-height: clamp(30px, 1.8vw, 36px) !important;
+    padding: 0 clamp(14px, 1vw, 20px) !important;
+    border-radius: clamp(8px, 0.6vw, 11px) !important;
+    font-size: clamp(11px, 0.65vw, 12.5px) !important;
+  }
+
+  /* Auth / Create Account Card (Increased label-to-input gap by 1px) */
+  .auth-center-container {
+    top: clamp(60px, 4.5vw, 95px) !important;
+    bottom: clamp(40px, 3.5vw, 80px) !important;
+  }
+  .auth-glass-card {
+    width: clamp(360px, 25vw, 440px) !important;
+    padding: clamp(20px, 1.5vw, 30px) clamp(24px, 1.8vw, 34px) !important;
+    border-radius: clamp(16px, 1.2vw, 24px) !important;
+  }
+  .auth-glass-card h1 {
+    font-size: clamp(22px, 1.6vw, 28px) !important;
+    margin: 0 0 clamp(3px, 0.2vw, 6px) 0 !important;
+  }
+  .auth-subtitle {
+    font-size: clamp(11.5px, 0.75vw, 13.5px) !important;
+    margin-bottom: clamp(14px, 1vw, 22px) !important;
+  }
+  .auth-form {
+    gap: clamp(10px, 0.7vw, 14px) !important;
+  }
+  .auth-field {
+    gap: clamp(3px, 0.2vw, 5px) !important; /* Increased label-to-input gap by 1px */
+  }
+  .auth-field label {
+    font-size: clamp(11px, 0.7vw, 12.5px) !important;
+  }
+  .auth-input-wrapper input {
+    padding: clamp(8px, 0.6vw, 11px) clamp(12px, 0.8vw, 15px) !important;
+    border-radius: clamp(8px, 0.6vw, 12px) !important;
+    font-size: clamp(12px, 0.8vw, 13.5px) !important;
+  }
+  .auth-eye-btn {
+    width: 20px !important;
+    height: 20px !important;
+    right: 8px !important;
+    font-size: clamp(12px, 0.7vw, 14px) !important;
+  }
+  .auth-button {
+    height: clamp(34px, 2.3vw, 42px) !important;
+    border-radius: clamp(10px, 0.7vw, 14px) !important;
+    font-size: clamp(13px, 0.9vw, 15px) !important;
+  }
+  .auth-footer {
+    margin-top: clamp(12px, 0.8vw, 18px) !important;
+    font-size: clamp(11.5px, 0.75vw, 13px) !important;
+  }
+  .auth-demo-hint {
+    margin-top: clamp(8px, 0.5vw, 12px) !important;
+    font-size: clamp(10.5px, 0.65vw, 11.5px) !important;
+  }
+
+  /* Enforce absolute dynamic scaling & customized arrow on Auth select dropdown! */
+  .auth-input-wrapper select {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: clamp(8px, 0.6vw, 11px) clamp(12px, 0.8vw, 15px) !important;
+    border-radius: clamp(8px, 0.6vw, 12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    font-size: clamp(12px, 0.8vw, 13.5px) !important;
+    color: #0d2167 !important;
+    outline: none !important;
+    cursor: pointer !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    height: clamp(32px, 2.3vw, 42px) !important; /* Matches auth input heights exactly */
+    
+    /* Elegant dropdown arrow */
+    background-image:
+      linear-gradient(45deg, transparent 50%, #2563ff 50%),
+      linear-gradient(135deg, #2563ff 50%, transparent 50%) !important;
+    background-position:
+      calc(100% - 16px) 50%,
+      calc(100% - 12px) 50% !important;
+    background-size: 5px 5px, 5px 5px !important;
+    background-repeat: no-repeat !important;
+    padding-right: 36px !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     8. GLOBAL FOOTER NOTE / DISCLAIMER
+     Compacted and positioned cleanly at the bottom of the screens.
+     ---------------------------------------------------------- */
+  .footer-note {
+    font-size: clamp(9.5px, 0.55vw, 11.5px) !important;
+    bottom: clamp(10px, 0.7vw, 20px) !important;
+    gap: clamp(4px, 0.3vw, 6px) !important;
+  }
+
+  .footer-lock-icon {
+    font-size: clamp(11px, 0.6vw, 13px) !important;
+  }
+
+  /* ----------------------------------------------------------
+     9. CHAT PANEL WIDTH OVERLAYS & CONTAINER FIXES
+     Aligns the absolute positioned Chat Panel exactly over the 
+     right sidebar's 20% column in both single and multi-report layouts.
+     ---------------------------------------------------------- */
+  .dashv2-chat-panel {
+    width: calc(20% - 6.4px) !important;
+    max-width: calc(20% - 6.4px) !important;
+    left: calc(80% + 6.4px) !important;
+    right: auto !important;
+  }
+
+  .dashv2-chat-panel .chat-panel {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+
+  /* ----------------------------------------------------------
+     10. NAVBAR PROFILE DROP_DOWN/POPOVER (.nav-profile-menu)
+     Proportionately scaled down and compacted popover profile card.
+     ---------------------------------------------------------- */
+  .nav-profile-menu {
+    /* Matches the right sidebar / chat-panel column width (20% of body, minus its share of the grid gap) */
+    width: clamp(298px, calc(21.5vw - 14px), 392px) !important;
+    padding: clamp(18px, 1.4vw, 24px) clamp(12px, 0.9vw, 16px) !important;
+    border-radius: clamp(18px, 1.4vw, 24px) !important;
+    top: clamp(42px, 3.2vw, 52px) !important;
+  }
+
+  .nav-profile-header {
+    padding: clamp(10px, 0.7vw, 14px) clamp(6px, 0.4vw, 10px) !important;
+    gap: clamp(6px, 0.4vw, 10px) !important;
+    border-radius: clamp(10px, 0.7vw, 13px) !important;
+  }
+
+  .nav-profile-avatar {
+    width: clamp(28px, 2vw, 34px) !important;
+    height: clamp(28px, 2vw, 34px) !important;
+    flex: 0 0 clamp(28px, 2vw, 34px) !important;
+    border-radius: clamp(6px, 0.4vw, 9px) !important;
+    font-size: clamp(10.5px, 0.7vw, 12.5px) !important;
+  }
+
+  .nav-profile-heading strong {
+    font-size: clamp(11.5px, 0.8vw, 13.5px) !important;
+  }
+
+  .nav-profile-heading span {
+    font-size: clamp(9px, 0.6vw, 10.5px) !important;
+  }
+
+  .nav-profile-details {
+    padding: clamp(12px, 0.9vw, 16px) clamp(8px, 0.5vw, 12px) !important;
+    margin: clamp(10px, 0.7vw, 14px) 0 !important;
+    border-radius: clamp(10px, 0.7vw, 13px) !important;
+    gap: clamp(8px, 0.6vw, 12px) !important;
+  }
+
+  .nav-profile-detail {
+    grid-template-columns: 74px minmax(0, 1fr) !important; /* Compact aligned label-to-value grid width */
+    gap: clamp(4px, 0.3vw, 6px) !important;
+  }
+
+  .nav-profile-detail span {
+    font-size: clamp(9.5px, 0.6vw, 11px) !important;
+  }
+
+  .nav-profile-detail strong {
+    font-size: clamp(9.5px, 0.6vw, 11px) !important;
+  }
+
+  .nav-profile-edit,
+  .nav-profile-logout {
+    min-height: clamp(34px, 2.4vw, 40px) !important;
+    border-radius: clamp(8px, 0.5vw, 11px) !important;
+    font-size: clamp(10.5px, 0.7vw, 12px) !important;
+    gap: 6px !important;
+  }
+
+  .nav-profile-edit {
+    margin-bottom: clamp(4px, 0.3vw, 6px) !important;
+  }
+
+  .nav-profile-edit svg,
+  .nav-profile-logout svg {
+    width: clamp(11px, 0.7vw, 13px) !important;
+    height: clamp(11px, 0.7vw, 13px) !important;
+  }
+
+  /* ----------------------------------------------------------
+     11. RESET PASSWORD PAGE (ResetPasswordPage.jsx)
+     Inherits all optimized .auth-glass-card, .auth-form, and .auth-field 
+     classes for fluid scaling. Place any custom password-strength meters, 
+     token warning banners, or custom reset components below:
+     ---------------------------------------------------------- */
+  /* Example: Password strength meter wrapper */
+  .password-strength-wrapper {
+    margin-top: clamp(4px, 0.3vw, 8px) !important;
+    font-size: clamp(10px, 0.6vw, 11.5px) !important;
+  }
+  
+  /* Example: Token expiration warning alert */
+  .reset-token-warning {
+    padding: clamp(8px, 0.6vw, 12px) !important;
+    border-radius: clamp(8px, 0.6vw, 12px) !important;
+    font-size: clamp(11.5px, 0.75vw, 13px) !important;
+  }
+}

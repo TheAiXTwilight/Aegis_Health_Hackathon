@@ -766,6 +766,18 @@ def _classify_against_ranges(item: dict, lab_ranges: dict | None = None) -> dict
 
     rng = _find_range(key)
     if not rng:
+        # No numeric range available anywhere (neither the lab's own PDF
+        # nor the hardcoded fallback table) — this does NOT mean the
+        # value is normal, it means we can't determine direction/severity
+        # numerically. Leaving status="reported"/risk_score=None here
+        # makes the item invisible to every downstream abnormality check
+        # (including the clinical picture biomarker fallback), so a real
+        # abnormality in an uncommon/regional biomarker could silently
+        # never surface anywhere. Mark it distinctly so callers can
+        # still choose to show it — flagged for clinician review, just
+        # without a computed high/low direction — rather than losing it.
+        item["status"] = "unclassified"
+        item["risk_score"] = 1
         return item
 
     value = item.get("value")

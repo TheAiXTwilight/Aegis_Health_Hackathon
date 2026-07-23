@@ -9,7 +9,7 @@ import AboutPage from "../features/about/AboutPage";
 import LoginPage from "../features/auth/LoginPage";
 import RegisterPage from "../features/auth/RegisterPage";
 import ResetPasswordPage from "../features/auth/ResetPasswordPage";
-import ProfileSetupPage from "../features/profile/ProfileSetupPage";
+import ProfileSetupPage from "../components/Profile/ProfileSetupPage";
 import ProtectedRoute from "../components/ProtectedRoute/ProtectedRoute";
 
 export default function AppRoutes() {

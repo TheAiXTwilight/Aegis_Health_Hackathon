@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import ProfileForm from "./ProfileForm";
 import "./Profile.css";
-import "./ProfileGlassOverride.css";
 
 export default function ProfileModal({ onClose }) {
   useEffect(() => {

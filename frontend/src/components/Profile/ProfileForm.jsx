@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { getProfile, updateProfile, changeEmail } from "../../services/api";
 import "./Profile.css";
-import "./ProfileGlassOverride.css";
 
 const SECURITY_QUESTIONS = [
   "What is your favorite pet's name?",
@@ -232,54 +231,77 @@ export default function ProfileForm({
       <div className="profile-form-grid">
         <label className="profile-field profile-field-wide">
           <span>Full Name *</span>
-          <input
-            type="text"
-            value={form.fullName}
-            onChange={updateField("fullName")}
-            autoComplete="name"
-            disabled={saving}
-          />
+          <div className="profile-input-with-icon">
+            <span className="profile-field-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7182b1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            </span>
+            <input
+              type="text"
+              value={form.fullName}
+              onChange={updateField("fullName")}
+              autoComplete="name"
+              disabled={saving}
+            />
+          </div>
         </label>
         <label className="profile-field">
           <span>Date of Birth *</span>
-          <input
-            type="text"
-            value={form.dateOfBirth}
-            onChange={handleDobChange}
-            placeholder="DD/MM/YYYY"
-            inputMode="numeric"
-            maxLength={10}
-            disabled={saving}
-          />
+          <div className="profile-input-with-icon">
+            <span className="profile-field-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7182b1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </span>
+            <input
+              type="text"
+              value={form.dateOfBirth}
+              onChange={handleDobChange}
+              placeholder="DD/MM/YYYY"
+              inputMode="numeric"
+              maxLength={10}
+              disabled={saving}
+            />
+          </div>
         </label>
         <label className="profile-field">
           <span>Sex *</span>
-          <select value={form.sex} onChange={updateField("sex")} disabled={saving}>
-            <option value="">Select</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-            <option value="Other">Other</option>
-            <option value="Prefer not to say">Prefer not to say</option>
-          </select>
+          <div className="profile-input-with-icon">
+            <span className="profile-field-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7182b1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="14" r="6"></circle><path d="M21 3l-6.35 6.35"></path><path d="M15 3h6v6"></path></svg>
+            </span>
+            <select value={form.sex} onChange={updateField("sex")} disabled={saving}>
+              <option value="">Select</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+          </div>
         </label>
         <label className="profile-field">
           <span>Blood Group *</span>
-          <select value={form.bloodGroup} onChange={updateField("bloodGroup")} disabled={saving}>
-            <option value="">Select</option>
-            {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) => (
-              <option value={group} key={group}>{group}</option>
-            ))}
-          </select>
+          <div className="profile-input-with-icon">
+            <span className="profile-field-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7182b1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2s7 8.5 7 13a7 7 0 0 1-14 0c0-4.5 7-13 7-13z"></path></svg>
+            </span>
+            <select value={form.bloodGroup} onChange={updateField("bloodGroup")} disabled={saving}>
+              <option value="">Select</option>
+              {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map((group) => (
+                <option value={group} key={group}>{group}</option>
+              ))}
+            </select>
+          </div>
         </label>
         <label className="profile-field profile-field-wide">
           <span>Allergies</span>
-          <textarea
-            value={form.allergies}
-            onChange={updateField("allergies")}
-            placeholder="Comma-separated, e.g. Penicillin, peanuts"
-            rows="2"
-            disabled={saving}
-          />
+          <div className="profile-input-with-icon">
+            <span className="profile-field-icon profile-textarea-icon">✚</span>
+            <textarea
+              value={form.allergies}
+              onChange={updateField("allergies")}
+              placeholder="Comma-separated, e.g. Penicillin, peanuts"
+              rows="2"
+              disabled={saving}
+            />
+          </div>
         </label>
       </div>
 
@@ -357,9 +379,9 @@ export default function ProfileForm({
           )}
 
           {/* Security Question */}
-          <div className="profile-email-row" style={{ marginTop: showEmailChange ? "16px" : "0" }}>
+          <div className="profile-email-row">
             <span className="profile-email-label">Security Q</span>
-            <span className="profile-email-value" style={{ fontSize: "12px" }}>
+            <span className="profile-email-value">
               {user?.security_question || "Not set"}
             </span>
             {!showSecurityChange && (
@@ -387,22 +409,12 @@ export default function ProfileForm({
                   value={newSecurityQuestion}
                   onChange={(e) => setNewSecurityQuestion(e.target.value)}
                   disabled={securityLoading}
-                  style={{
-                    width: "100%",
-                    boxSizing: "border-box",
-                    padding: "14px 16px",
-                    borderRadius: "16px",
-                    border: "1px solid rgba(255, 255, 255, 0.5)",
-                    background: newSecurityQuestion ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.2)",
-                    fontSize: "15px",
-                    color: "#0d2167",
-                    outline: "none",
-                    cursor: "pointer",
-                  }}
                 >
-                  <option value="" style={{ color: '#999' }}>Select a question</option>
+                  <option value="">Select a question</option>
                   {SECURITY_QUESTIONS.map((q, i) => (
-                    <option key={SECURITY_QUESTION_KEYS[i]} value={SECURITY_QUESTION_KEYS[i]} style={{ background: '#fff', color: '#0d2167' }}>{q}</option>
+                    <option key={SECURITY_QUESTION_KEYS[i]} value={SECURITY_QUESTION_KEYS[i]}>
+                      {q}
+                    </option>
                   ))}
                 </select>
               </label>

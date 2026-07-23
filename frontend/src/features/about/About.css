@@ -111,7 +111,7 @@
 /* --- TEAM CARDS --- */
 .team-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: clamp(24px, 2.8vw, 36px);
   width: 100%;
 }
@@ -259,7 +259,7 @@
 
 .mission-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
   gap: clamp(12px, 1.5vw, 20px);
   background: rgba(255, 255, 255, 0.12);
   backdrop-filter: blur(16px) saturate(1.3);

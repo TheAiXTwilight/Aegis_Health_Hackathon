@@ -1,220 +1,111 @@
+/* ========================================================================
+   Profile.css — AegisHealth Profile Setup & Modal
+   Matches MedicalForm.css visual language (compact variant)
+   ======================================================================== */
+
+/* ── Setup page container ───────────────────────────────────────── */
 .profile-setup-container {
   position: absolute;
   top: 95px;
-  right: 0;
-  bottom: 58px;
+  bottom: 80px;
   left: 0;
-  z-index: 8;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px 28px;
+  z-index: 2;
+  padding: 10px 24px;
 }
 
-.profile-setup-card,
-.profile-modal-card {
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  background: linear-gradient(
-    145deg,
-    rgba(242, 247, 255, 0.62),
-    rgba(212, 225, 255, 0.34)
-  );
-  backdrop-filter: blur(34px) saturate(1.7);
-  -webkit-backdrop-filter: blur(34px) saturate(1.7);
+/* ── Master card ────────────────────────────────────────────────── */
+.profile-setup-card {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.24),
-    0 22px 64px rgba(13, 33, 103, 0.2);
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* The edit-profile MODAL is a floating dialog on top of the app's own
+   blurred/gradient background, not a page section — the LIGHT glass
+   treatment used on .profile-setup-card (0.16 opacity) reads as
+   washed-out/illegible there, since it's stacked over an already-blurred
+   backdrop instead of the page itself. Keep the glass identity (theme
+   requirement): moderate opacity so the backdrop's color/blur still
+   shows through (avoids reading as flat white), with contrast for
+   legibility coming mainly from the border + shadow, not from opacity. */
+.profile-modal-card {
+  background: rgba(255, 255, 255, 0.33);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow:
+    0 24px 64px rgba(13, 33, 103, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
 .profile-setup-card {
-  width: min(820px, 100%);
+  width: 820px;
+  max-width: 100%;
   max-height: 100%;
   overflow-y: auto;
-  border-radius: 32px;
-  padding: 28px 34px;
+  border-radius: 34px;
+  padding: 36px 42px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
+/* ── Heading block (eyebrow + title + subtitle) ───────────────────
+   Previously unstyled — .profile-setup-heading/.profile-setup-step/
+   h1/p fell back to browser defaults, causing cramped spacing between
+   "Profile setup" / "Tell us about yourself" / the subtitle line and
+   the Full Name field. Mirrors the h1/subtitle scale already used on
+   Auth.css so the two flows feel consistent. */
 .profile-setup-heading {
-  text-align: center;
-  margin-bottom: 22px;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 28px;
 }
 
 .profile-setup-step {
-  display: inline-flex;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: rgba(37, 99, 255, 0.1);
+  display: inline-block;
   color: #2563ff;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-.profile-setup-heading h1,
-.profile-modal-header h2 {
-  color: #0d2167;
-  margin: 9px 0 5px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 10px;
 }
 
 .profile-setup-heading h1 {
-  font-size: 30px;
+  color: #0d2167;
+  font-size: 34px;
+  font-weight: 650;
+  line-height: 1.15;
+  margin: 0 0 10px;
 }
 
-.profile-setup-heading p,
-.profile-modal-header p {
-  color: #53658f;
-  margin: 0;
-  font-size: 13px;
+.profile-setup-heading p {
+  color: #4c5d8f;
+  font-size: 15px;
+  font-weight: 400;
   line-height: 1.5;
+  margin: 0;
+  max-width: 640px;
 }
 
-.profile-form {
-  width: 100%;
+@media (max-width: 720px) {
+  .profile-setup-heading {
+    margin-bottom: 22px;
+  }
+  .profile-setup-heading h1 {
+    font-size: 26px;
+  }
 }
 
-.profile-form-loading {
-  min-height: 160px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #425894;
-  font-weight: 650;
-}
-
-.profile-form-error {
-  margin-bottom: 14px;
-  padding: 11px 14px;
-  border-radius: 13px;
-  border: 1px solid rgba(239, 68, 68, 0.22);
-  background: rgba(239, 68, 68, 0.09);
-  color: #b91c1c;
-  font-size: 12px;
-  font-weight: 650;
-  text-align: center;
-}
-
-.profile-form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
-  gap: 14px 16px;
-}
-
-.profile-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.profile-field-wide {
-  grid-column: 1 / -1;
-}
-
-.profile-field > span {
-  color: #0d2167;
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.profile-field > span em {
-  color: #6373a1;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 550;
-}
-
-.profile-field input,
-.profile-field select,
-.profile-field textarea {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.38);
-  color: #0d2167;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 550;
-  outline: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.profile-field input,
-.profile-field select {
-  height: 44px;
-  min-height: 44px;
-  padding: 0 13px;
-}
-
-.profile-field textarea {
-  min-height: 62px;
-  padding: 10px 13px;
-  resize: vertical;
-}
-
-.profile-field input::placeholder,
-.profile-field textarea::placeholder {
-  color: rgba(66, 88, 148, 0.62);
-}
-
-.profile-field input:focus,
-.profile-field select:focus,
-.profile-field textarea:focus {
-  border-color: rgba(37, 99, 255, 0.58);
-  background: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 0 3px rgba(37, 99, 255, 0.1);
-}
-
-.profile-field input:disabled,
-.profile-field select:disabled,
-.profile-field textarea:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.profile-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.profile-primary-button,
-.profile-secondary-button {
-  min-height: 43px;
-  padding: 0 22px;
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 750;
-  cursor: pointer;
-}
-
-.profile-primary-button {
-  border: 1px solid rgba(37, 99, 255, 0.35);
-  background: #2563ff;
-  color: #fff;
-  box-shadow: 0 7px 20px rgba(37, 99, 255, 0.2);
-}
-
-.profile-secondary-button {
-  border: 1px solid rgba(13, 33, 103, 0.16);
-  background: rgba(255, 255, 255, 0.15);
-  color: #0d2167;
-}
-
-.profile-primary-button:disabled,
-.profile-secondary-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
+/* ── Modal ─────────────────────────────────────────────────────── */
 .profile-modal-overlay {
   position: fixed;
   inset: 0;
@@ -223,15 +114,15 @@
   align-items: center;
   justify-content: center;
   padding: 28px;
-  background: rgba(13, 33, 103, 0.08);
-  backdrop-filter: blur(6px) saturate(1.12);
-  -webkit-backdrop-filter: blur(6px) saturate(1.12);
+  background: rgba(13, 33, 103, 0.22);
+  backdrop-filter: blur(8px) saturate(1.12);
+  -webkit-backdrop-filter: blur(8px) saturate(1.12);
 }
 
 .profile-modal-card {
-  width: min(780px, calc(100vw - 56px));
+  width: min(820px, calc(100vw - 56px));
   max-height: calc(100vh - 70px);
-  border-radius: 30px;
+  border-radius: 34px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -242,52 +133,408 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
-  padding: 22px 26px 17px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.28);
+  padding: 24px 42px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 .profile-modal-header h2 {
-  font-size: 24px;
-  margin-top: 0;
+  color: #0d2167;
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.profile-modal-header p {
+  color: #6373a1;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .profile-modal-close {
-  width: 36px;
-  height: 36px;
-  flex: 0 0 36px;
-  border-radius: 12px;
-  border: 1px solid rgba(13, 33, 103, 0.12);
-  background: rgba(255, 255, 255, 0.15);
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.22);
   color: #0d2167;
-  font-size: 23px;
-  line-height: 1;
+  font-size: 18px;
   cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.profile-modal-close:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: translateY(-1px);
 }
 
 .profile-modal-scroll {
   overflow-y: auto;
-  padding: 20px 26px 24px;
+  padding: 20px 42px 26px;
 }
 
+/* ── Form ───────────────────────────────────────────────────────── */
+.profile-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-form-loading {
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #425894;
+  font-weight: 650;
+}
+
+/* ── Banners ───────────────────────────────────────────────────── */
+.profile-form-error,
+.profile-success {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  animation: profileSlideDown 0.2s ease-out;
+}
+
+.profile-form-error {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.profile-success {
+  background: rgba(34, 197, 94, 0.09);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  color: #15803d;
+}
+
+@keyframes profileSlideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Grid ──────────────────────────────────────────────────────── */
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.profile-field-wide {
+  grid-column: 1 / -1;
+}
+
+.profile-field > span {
+  color: #0d2167;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Inputs (matches medical-form 48px input language) ───────────── */
+.profile-input-with-icon {
+  position: relative;
+  width: 100%;
+}
+
+.profile-field-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  font-size: 15px;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.profile-field-icon.profile-textarea-icon {
+  top: 18px;
+  transform: none;
+}
+
+.profile-field input,
+.profile-field select,
+.profile-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 14px;
+  color: #0d2167;
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+/* Inside the semi-glass modal card, the light setup-page field opacity
+   (0.14) still reads faint — raise it a bit so fields stay legible
+   against the higher-opacity card background, without going fully flat. */
+.profile-modal-card .profile-field input,
+.profile-modal-card .profile-field select,
+.profile-modal-card .profile-field textarea {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.profile-modal-card .profile-field input:focus,
+.profile-modal-card .profile-field select:focus,
+.profile-modal-card .profile-field textarea:focus {
+  background: rgba(255, 255, 255, 0.34);
+  border-color: #2563ff;
+}
+
+.profile-field input,
+.profile-field select {
+  height: 48px;
+  padding: 0 16px 0 44px;
+}
+
+.profile-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 36px;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #2563ff 50%),
+    linear-gradient(135deg, #2563ff 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 2px),
+    calc(100% - 13px) calc(50% - 2px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* Allergies textarea — one-line default, auto-grows */
+.profile-field textarea {
+  min-height: 48px;
+  height: 48px;
+  max-height: 160px;
+  padding: 13px 16px 13px 44px;
+  line-height: 1.4;
+  resize: vertical;
+  overflow-y: auto;
+}
+
+.profile-field input::placeholder,
+.profile-field textarea::placeholder {
+  color: rgba(66, 88, 148, 0.55);
+}
+
+.profile-field input:focus,
+.profile-field select:focus,
+.profile-field textarea:focus {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #2563ff;
+}
+
+.profile-field input:disabled,
+.profile-field select:disabled,
+.profile-field textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Actions ───────────────────────────────────────────────────── */
+.profile-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.profile-primary-button,
+.profile-secondary-button {
+  min-height: 42px;
+  padding: 0 22px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.profile-primary-button {
+  background: rgba(37, 99, 255, 0.85);
+  border: 1px solid rgba(37, 99, 255, 0.9);
+  backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow:
+    0 4px 20px rgba(37, 99, 255, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.profile-primary-button:hover:not(:disabled) {
+  background: rgba(26, 79, 214, 0.92);
+  transform: translateY(-1px);
+}
+
+.profile-secondary-button {
+  background: rgba(255, 255, 255, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #0d2167;
+}
+
+.profile-secondary-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.profile-primary-button:disabled,
+.profile-secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ========================================================================
+   Account section (Email + Security) — sized to match field inputs above
+   ======================================================================== */
+
+.profile-email-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-email-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  height: 42px;
+  min-height: 42px;
+  transition: all 0.2s ease;
+}
+
+.profile-email-row:hover {
+  background: rgba(255, 255, 255, 0.32);
+  border-color: rgba(37, 99, 255, 0.3);
+}
+
+.profile-email-label {
+  flex: 0 0 92px;
+  color: #0d2167;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-email-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #0d2167;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-email-change-btn {
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 255, 0.3);
+  background: rgba(37, 99, 255, 0.08);
+  color: #2563ff;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.profile-email-change-btn:hover {
+  background: #2563ff;
+  color: #ffffff;
+  border-color: #2563ff;
+}
+
+/* Inline change form (opens when Change is clicked) */
+.profile-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(37, 99, 255, 0.25);
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  animation: profileSlideDown 0.2s ease-out;
+}
+
+.profile-email-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
 @media (max-width: 720px) {
   .profile-form-grid {
     grid-template-columns: 1fr;
   }
-
   .profile-field-wide {
     grid-column: auto;
   }
-
   .profile-setup-card {
-    padding: 22px 20px;
+    padding: 26px 22px;
+    border-radius: 28px;
   }
-
   .profile-modal-overlay {
     padding: 14px;
   }
-
   .profile-modal-card {
     width: calc(100vw - 28px);
     max-height: calc(100vh - 28px);
+    border-radius: 28px;
+  }
+  .profile-modal-header {
+    padding: 20px 22px 14px;
+  }
+  .profile-modal-header h2 {
+    font-size: 22px;
+  }
+  .profile-modal-scroll {
+    padding: 18px 22px 22px;
+  }
+}
+
+/* Responsive tweak for very narrow screens */
+@media (max-width: 520px) {
+  .profile-email-row {
+    height: auto;
+    min-height: 42px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    gap: 6px 12px;
+  }
+  .profile-email-label {
+    flex: 0 0 100%;
+  }
+  .profile-email-value {
+    white-space: normal;
+    word-break: break-all;
   }
 }

@@ -206,18 +206,21 @@
 }
 
 .dashv2-vitals-overview-card {
-  flex: 1 1 auto;
+  flex: 0 0 67%;
   min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 18px 20px;
+  overflow: hidden;
 }
 
 .dashv2-quicksig-card-tall {
-  flex: 0 0 auto;
-  min-height: 334px;
+  flex: 0 0 33%;
+  min-height: 0;
+  max-height: none;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   padding: 16px 20px 18px;
 }
 
@@ -227,6 +230,7 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
 }
 
 .dashv2-quicksig-body-sidebar .dashv2-quicksig-section {
@@ -260,7 +264,7 @@
   padding: 16px 0 0;
 }
 
-.dashv2-quicksig-card-tall .dashv2-quicksig-label { font-size: 11.4px; margin-bottom: 7.2px; }
+.dashv2-quicksig-card-tall .dashv2-quicksig-label { font-size: 12.4px; margin-bottom: 7.2px; }
 .dashv2-quicksig-card-tall .dashv2-quicksig-symptom {
   margin-bottom: 0;
   font-size: 13px;
@@ -602,21 +606,66 @@
   padding-right: 2px;
 }
 
-.dashv2-stage > .dashv2-vitals-row-card {
-  flex: 1 1 auto;
+/* Fixed row-height ratio across the 5 stacked sections, regardless of
+   how much content each one holds:
+   1. ValidationBanner            ->  5%
+   2. ClinicalSummaryCard         -> 15%
+   3. .dashv2-triple-row          -> 20%
+   4. .dashv2-card-grid           -> 30%
+   5. ComparisonTable / VitalsRow -> 30% */
+.dashv2-stage > .dashv2-banner {
+  flex: 0 0 5%;
   min-height: 0;
+  overflow: hidden;
+}
+
+.dashv2-stage > .dashv2-analysis-card {
+  flex: 0 0 18%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashv2-stage > .dashv2-triple-row {
+  flex: 0 0 18%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashv2-stage > .dashv2-card-grid {
+  flex: 0 0 27.5%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashv2-stage > .dashv2-vitals-row-card {
+  flex: 0 0 32%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) {
-  flex: 0 0 auto;
+  flex: 0 0 31.5%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
+}
+
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-card-header {
+  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid {
-  flex: 0 0 auto;
-  overflow: visible;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) .dashv2-comparison-grid-body {
+  overflow: hidden;
 }
 
 /* ── Shared Glass Card ─────────────────────────────────────── */
@@ -1045,15 +1094,28 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* CHANGED: was `justify-content: center`. Centering forced the three
+     stacked sections (symptoms / confidence+trend / last-updated) to
+     fight for equal vertical space regardless of actual content size,
+     which is what caused the "Reported Symptoms" tag list to overflow
+     and get clipped at the card's bottom edge when 4+ tags wrapped to
+     multiple lines (see screenshot). Switching to flex-start lets each
+     section take only the height it actually needs, top to bottom. */
+  justify-content: flex-start;
   box-sizing: border-box;
+  overflow: hidden; /* keep the outer card edge clean */
 }
 
 .dashv2-vitals-row-card .dashv2-quicksig-card .dashv2-quicksig-body {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* CHANGED: was `justify-content: center` (inherited intent from the
+     card). Now top-aligned so content stacks naturally instead of
+     centering into overflow. */
+  justify-content: flex-start;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .dashv2-vitals-row-card > div:first-child .dashv2-card-header,
@@ -1184,7 +1246,7 @@
 
 .dashv2-vitals-row-card .dashv2-quicksig-label {
   font-size: 11.4px;
-  margin-bottom: 10px;
+  margin-bottom: 17px;
 }
 
 .dashv2-vitals-row-card .dashv2-quicksig-symptom {
@@ -1196,7 +1258,40 @@
 }
 
 .dashv2-vitals-row-card .dashv2-quicksig-symptom-tags {
-  padding-bottom: 24px;
+  /* CHANGED: was fixed `padding-bottom: 24px` with no cap — a long tag
+     list simply pushed the rest of the card down and out of view.
+     Now this wrapper is allowed to size to its own content, capped,
+     and scrolls internally if it still doesn't fit. */
+  padding-bottom: 12px !important;
+  max-height: none;
+}
+
+/* NEW — single-purpose dashboard only: let the "Reported Symptoms"
+   section grow to fit wrapped tags, but cap it and scroll internally
+   so it never pushes Confidence/Trend/Last Updated out of the card. */
+.dashv2-vitals-row-card .dashv2-quicksig-section-top {
+  flex: 0 1 auto;
+  max-height: 42%;
+  overflow-y: auto;
+  padding-bottom: 12px;
+}
+
+.dashv2-vitals-row-card .dashv2-quicksig-section-top::-webkit-scrollbar {
+  width: 4px;
+}
+.dashv2-vitals-row-card .dashv2-quicksig-section-top::-webkit-scrollbar-thumb {
+  background: rgba(37,99,255,0.25);
+  border-radius: 4px;
+}
+.dashv2-vitals-row-card .dashv2-quicksig-section-top::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Confidence/Trend and Last Updated sections keep their natural size
+   and are never compressed by the symptoms section above them. */
+.dashv2-vitals-row-card .dashv2-quicksig-section-mid,
+.dashv2-vitals-row-card .dashv2-quicksig-section-bottom {
+  flex: 0 0 auto;
 }
 
 .dashv2-vitals-row-card .dashv2-quicksig-grid {
@@ -1320,6 +1415,11 @@
 .dashv2-comparison-grid {
   width: 100%;
   font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .dashv2-comparison-grid-head,
@@ -1333,6 +1433,16 @@
 .dashv2-comparison-grid-head {
   padding-bottom: 6px;
   border-bottom: 1px solid rgba(255,255,255,0.3);
+  flex: 0 0 auto;
+}
+
+.dashv2-comparison-grid-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-size: 11.5px;
 }
 
 .dashv2-comp-head {
@@ -1384,7 +1494,6 @@
 }
 
 .dashv2-comparison-grid-row {
-  padding: 5px 0;
   border-bottom: 1px solid rgba(255,255,255,0.15);
 }
 
@@ -1416,7 +1525,8 @@
   text-align: center;
   font-size: 11px;
   color: #262626;
-  margin-top: 8px;
+  margin-top: 25px;
+  flex-shrink: 0;
 }
 
 /* ── Card Grid ─────────────────────────────────────────────── */
@@ -1862,7 +1972,7 @@
 
 .dashv2-actions-list-tight .dashv2-action-row,
 .dashv2-precaution-list-with-dividers .dashv2-precaution-row {
-  padding: 8px 0 8px;
+  padding: 6px 0;
 }
 
 .dashv2-precaution-list-with-dividers .dashv2-precaution-row {
@@ -1975,11 +2085,11 @@
 }
 
 .clinical-picture-row {
-  display: -webkit-box;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
+  overflow: visible;
+  line-height: 1.55;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .clinical-picture-row .clinical-term {
@@ -1988,7 +2098,7 @@
 }
 
 .dashv2-precautions-card {
-  height: 250px;
+  min-height: 250px;
   overflow: hidden;
 }
 
@@ -2053,12 +2163,6 @@
   text-align: center !important;
 }
 
-.dashv2-comparison-grid-row {
-  padding: 6px 0;
-}
-.dashv2-comparison-grid-row:last-child {
-  padding-bottom: 8px;
-}
 .dashv2-comparison-caption {
   margin-top: 12px;
 }
@@ -2094,12 +2198,6 @@
   font-size: 11px;
 }
 
-.dashv2-comparison-grid-row {
-  padding: 4px 0;
-}
-.dashv2-comparison-grid-row:last-child {
-  padding-bottom: 5px;
-}
 .dashv2-comparison-grid-head {
   padding-bottom: 5px;
 }
@@ -2125,10 +2223,11 @@
 }
 
 .dashv2-comparison-grid-row {
-  padding: 4.1px 0;
+  padding: 3.2px 0;
+  flex: 0 0 auto;
 }
 .dashv2-comparison-grid-row:last-child {
-  padding-bottom: 5.1px;
+  padding-bottom: 2px;
 }
 
 .dashv2-vital-hchip-top {
@@ -2172,10 +2271,622 @@
 
 /* 3. Comparison table — add gap between header row and first data row */
 .dashv2-comparison-grid-head {
-  padding-bottom: 14px;
+  padding-bottom: 8px;
   margin-bottom: 2px;
 }
 
 .dashv2-comparison-grid-body .dashv2-comparison-grid-row:first-child {
+  padding-top: 2px;
+}
+
+.dashv2-comparison-caption {
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CHAT MARKDOWN RENDERING
+   ═══════════════════════════════════════════════════════════════════ */
+
+.dashv2-chat-md-p {
+  margin: 0 0 6px 0;
+  line-height: 1.5;
+}
+
+.dashv2-chat-md-p:last-child {
+  margin-bottom: 0;
+}
+
+.dashv2-chat-md-list {
+  margin: 4px 0 6px 0;
+  padding-left: 16px;
+  list-style: disc;
+}
+
+.dashv2-chat-md-list:last-child {
+  margin-bottom: 0;
+}
+
+.dashv2-chat-md-list li {
+  margin-bottom: 3px;
+  line-height: 1.45;
+}
+
+.dashv2-chat-md-list li:last-child {
+  margin-bottom: 0;
+}
+
+.dashv2-chat-panel-bubble strong {
+  font-weight: 700;
+  color: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SINGLE-PURPOSE DASHBOARD FIX — Quick Signals tag overflow
+   Scoped ONLY to `.dashv2-vitals-row-card` (the 1-report layout).
+   The sidebar variant (`.dashv2-quicksig-card-tall`, 2+ reports) is
+   completely untouched — its section flex ratios and centering are
+   unchanged from the original file.
+
+   Root cause: `.dashv2-quicksig-card` and `.dashv2-quicksig-body`
+   used `justify-content: center`, and the three internal sections
+   (symptoms / confidence+trend / last-updated) had no size cap. When
+   the symptom tag list wrapped to 2-3 lines, it pushed the card's
+   total content height past the fixed grid-row height, and the
+   overflow was clipped by the card's `overflow: hidden` boundary
+   instead of being visible or scrollable — this is exactly what the
+   screenshot shows ("Fatigue" tag and the divider line below it cut
+   off at the card edge).
+
+   Fix: top-align the card/body instead of centering, and let the
+   "Reported Symptoms" section (`.dashv2-quicksig-section-top`) size
+   to its own content up to a cap (42% of card height), scrolling
+   internally past that point. Confidence/Trend and Last Updated stay
+   fixed-size (`flex: 0 0 auto`) so they're always fully visible.
+   ═══════════════════════════════════════════════════════════════════ */
+
+   /* Keep fixed card ratios while reserving space for the 12px gaps.
+   This prevents the final Comparison and Quick Signals cards from
+   overflowing their clipped containers, preserving rounded bottom corners. */
+
+/* Main stage: 5 rows and 4 × 12px gaps = 48px reserved */
+.dashv2-stage > .dashv2-banner {
+  flex-basis: calc(5% - 2.4px);
+  box-sizing: border-box;
+}
+
+.dashv2-stage > .dashv2-analysis-card {
+  flex-basis: calc(18% - 8.64px);
+  box-sizing: border-box;
+}
+
+.dashv2-stage > .dashv2-triple-row {
+  flex-basis: calc(17.5% - 8.4px);
+  box-sizing: border-box;
+}
+
+.dashv2-stage > .dashv2-card-grid {
+  flex-basis: calc(27.5% - 13.2px);
+  box-sizing: border-box;
+}
+
+.dashv2-stage > .dashv2-vitals-row-card,
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) {
+  flex-basis: calc(32% - 15.36px);
+  box-sizing: border-box;
+}
+
+/* Sidebar: 2 cards and one 12px gap = 12px reserved */
+.dashv2-vitals-overview-card {
+  flex-basis: calc(67% - 8.04px);
+  box-sizing: border-box;
+}
+
+.dashv2-quicksig-card-tall {
+  flex-basis: calc(33% - 3.96px);
+  box-sizing: border-box;
+}
+
+/* Keep the triple-row cards within their fixed-height row,
+   so their bottom border-radius is not clipped. */
+.dashv2-triple-row > .dashv2-card {
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FINAL DASHBOARD LAYOUT ADJUSTMENTS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Clinical Summary — restore a little top and title-to-content spacing
+   in the multi-report layout. */
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card)) .dashv2-analysis-card {
+  padding-top: 10px;
+  padding-bottom: 8px;
+}
+
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card))
+  .dashv2-analysis-card .dashv2-card-header {
+  margin-bottom: 10px;
+}
+
+/* Preserve the requested allocation:
+   Care Plan / Trend / Risk row = 18%
+   Severity & Vitals Comparison = 31.5% */
+.dashv2-stage > .dashv2-triple-row {
+  flex-basis: calc(18% - 8.64px);
+}
+
+.dashv2-stage > .dashv2-card:last-child:not(.dashv2-vitals-row-card) {
+  flex-basis: calc(31.5% - 15.12px);
+}
+
+/* Triple row — keep all card edges inside the fixed-height row,
+   while allowing Care Plan content to use the available inner space. */
+.dashv2-triple-row > .dashv2-card {
+  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashv2-triple-row > .dashv2-card .dashv2-summary-factors-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 6px;
+  margin-bottom: 0;
+  overflow: hidden;
+}
+
+.dashv2-triple-row > .dashv2-card .dashv2-summary-factor-row {
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Fixed-size Personalized Recommendations and Clinical Picture cards:
+   their content stays inside each card and does not affect card position. */
+.dashv2-actions-card,
+.dashv2-precautions-card {
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.dashv2-actions-card .dashv2-info-list,
+.dashv2-precautions-card .dashv2-info-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Lift only the View Full Report button slightly away from the
+   lower edge of the Clinical Summary card. */
+.dashv2-stage:not(:has(> .dashv2-vitals-row-card))
+  .dashv2-summary-grid > div:last-child
+  .dashv2-summary-full-report-btn {
+  transform: translateY(-3px);
+}
+
+/* Softer supporting copy — consistent visual tone without competing
+   with card headings or recommendation titles. */
+.dashv2-triple-row .dashv2-summary-factor-text,
+.dashv2-actions-card .dashv2-action-detail {
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: #334155;
+}
+
+/* Primary Contributing Factors — softer, slightly smaller report link
+   with a little more visual space from the card bottom. */
+.dashv2-summary-grid > div:last-child .dashv2-summary-full-report-btn {
+  font-size: 11.5px;
+  margin-top: 3px;
+  margin-bottom: 7px;
+  transform: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SINGLE-REPORT DASHBOARD — FINAL VISUAL POLISH
+   Scoped to the layout containing .dashv2-vitals-row-card only.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Keep the final Vitals Overview / Quick Signals row fully inside the
+   stage so both inner cards retain their rounded bottom corners. */
+.dashv2-stage:has(> .dashv2-vitals-row-card) > .dashv2-vitals-row-card {
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card > div:first-child,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-card {
+  box-sizing: border-box;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+/* Quick Signals — add comfortable spacing after the header before
+   "Reported Symptom". */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-section-top {
   padding-top: 6px;
 }
+
+/* Primary Contributing Factors — compact link treatment in the shorter
+   single-report Clinical Summary card, preventing bottom clipping. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid > div:last-child .dashv2-summary-full-report-btn {
+  font-size: 10.5px;
+  line-height: 1.2;
+  margin-top: 4px;
+  margin-bottom: 0;
+  transform: none;
+}
+
+/* Vitals Overview — consistent title block height aligns every reading,
+   even where a parameter name wraps to two lines. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip {
+  justify-content: flex-start;
+  gap: 8px;
+  padding-top: 16px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-top {
+  min-height: 30px;
+  align-items: flex-start;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #334155;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-icon {
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+}
+
+/* Less visually aggressive vital values while keeping them prominent. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-val {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.15px;
+  color: #0d2167;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-val span {
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-badge {
+  font-size: 10px;
+  padding: 4px 10px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SINGLE-REPORT — FINAL SPACING / ALIGNMENT CORRECTIONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Leave a little more physical room at the bottom of the final row so
+   the Vitals and Quick Signals cards show their complete rounded edges. */
+.dashv2-stage:has(> .dashv2-vitals-row-card) > .dashv2-vitals-row-card {
+  flex-basis: calc(32% - 20px);
+}
+
+/* The shorter one-report Clinical Summary needs the link pulled upward
+   rather than adding bottom margin that is clipped by the card. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid > div:last-child
+  .dashv2-summary-full-report-btn {
+  font-size: 10.5px;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  position: relative;
+  top: -5px;
+  transform: none !important;
+}
+
+/* Quick Signals — compact the symptom section and its divider spacing. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-section-top {
+  padding-top: 2px;
+  padding-bottom: 6px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-label {
+  margin-bottom: 7px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-symptom {
+  padding-bottom: 8px;
+  line-height: 1.4;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-grid {
+  padding: 10px 0;
+}
+
+/* Vitals — use identical title/value/badge tracks in every chip.
+   This gives all labels, values, and status pills a consistent baseline,
+   including names that wrap onto two or three lines. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip {
+  display: grid;
+  grid-template-rows: 42px 28px 24px;
+  justify-content: stretch;
+  align-content: center;
+  align-items: start;
+  gap: 5px;
+  padding-top: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-top {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr);
+  column-gap: 6px;
+  align-items: start;
+  min-height: 0;
+  height: 42px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.18;
+  color: #334155;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-icon {
+  width: 27px;
+  height: 27px;
+  margin-top: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-val {
+  align-self: start;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-badge {
+  align-self: start;
+  margin-top: 0;
+}
+
+/* Fixed icon and text columns ensure every vital name starts at exactly
+   the same vertical alignment point inside its own chip. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-top {
+  display: grid;
+  grid-template-columns: 27px minmax(0, 1fr);
+  align-items: start;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vital-hchip-name {
+  display: block;
+  padding-top: 1px;
+  line-height: 1.18;
+}
+
+/* Single-report Quick Signals: clear three-section hierarchy. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-section-top {
+  padding: 6px 0 12px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-section-mid {
+  padding: 12px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-section-bottom {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-label {
+  margin-bottom: 6px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-symptom {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-vitals-row-card .dashv2-quicksig-grid {
+  padding: 0;
+  border-top: none;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  .dashv2-summary-grid > div:last-child {
+  position: relative;
+  top: -1px;
+}
+
+/* Append this block LAST in Dashboard.css.
+   It is scoped to the single-report layout and does not affect multi-report. */
+
+/* Stable final-row sizing: preserves the rounded lower edges. */
+.dashv2-stage:has(> .dashv2-vitals-row-card) > .dashv2-vitals-row-card {
+  flex-basis: calc(32% - 20px);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card > div:first-child,
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-card {
+  box-sizing: border-box;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+/* One fixed label track makes every vital label/value/status align. */
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip {
+  display: grid;
+  grid-template-rows: 44px 28px 24px;
+  align-content: center;
+  align-items: start;
+  gap: 6px;
+  padding: 0 14px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-top {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  column-gap: 6px;
+  align-items: start;
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.16;
+  color: #334155;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-icon {
+  width: 25px;
+  height: 25px;
+  margin: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-name {
+  display: block;
+  padding-top: 1px;
+  min-width: 0;
+  line-height: 1.16;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-val {
+  align-self: start;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.15px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-val span {
+  font-size: 11px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-badge {
+  align-self: start;
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 10px;
+}
+
+/* Quick Signals: equal visual sections with intentional dividers. */
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-section-top,
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-section-mid,
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-section-bottom {
+  flex: 1 1 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-section-top {
+  padding: 8px 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-section-mid {
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-section-bottom {
+  margin-top: 0;
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-label {
+  margin-bottom: 5px;
+  font-size: 11.4px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-symptom {
+  margin: 0;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-grid,
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-foot {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vitals-row-card .dashv2-quicksig-grid {
+  gap: 12px 0;
+}
+
+/* Center the icon and name block together inside the fixed vital title row.
+   This keeps one-line labels (Vitamin D, ESR) aligned with multi-line labels. */
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-top {
+  align-items: center;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-icon {
+  align-self: center;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card) .dashv2-vital-hchip-name {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding-top: 0;
+}
+

@@ -411,6 +411,138 @@ _DEFAULT_RED_FLAGS = [
     "signs of dehydration",
 ]
 
+# ── Contextual fallback red-flags (used when no specific pattern in
+# _RED_FLAG_PATTERNS matches) ────────────────────────────────────────
+#
+# Previously any case that didn't hit one of the acute-emergency
+# patterns above (which only cover things like low platelets + fever,
+# chest pain, critical troponin, etc.) fell straight through to the
+# single hardcoded _DEFAULT_RED_FLAGS list — so every mild/LOW-severity
+# report showed the exact same red-flag text regardless of what was
+# actually flagged. This table adds a lighter, body-system-aware layer
+# so the fallback still varies with the patient's actual findings.
+#
+# Each entry: keywords matched against flagged biomarker key/name
+# (substring, case-insensitive) → red flags relevant to that system.
+_SYSTEM_RED_FLAGS: list[tuple[set[str], list[str]]] = [
+    ({"haemoglobin", "hemoglobin", "mchc", "mch", "mcv", "hematocrit",
+      "rbc", "ferritin", "iron"}, [
+        "increasing fatigue or weakness",
+        "shortness of breath with normal activity",
+        "noticeable paleness",
+        "rapid or pounding heartbeat",
+    ]),
+    ({"wbc", "white blood", "neutrophil", "lymphocyte", "platelet"}, [
+        "new or worsening fever",
+        "unusual bruising or bleeding",
+        "frequent infections or slow-healing wounds",
+        "unexplained fatigue",
+    ]),
+    ({"glucose", "hba1c", "insulin"}, [
+        "excessive thirst or urination",
+        "unexplained weight change",
+        "blurred vision",
+        "confusion or drowsiness",
+    ]),
+    ({"tsh", "t3", "t4", "thyroid"}, [
+        "unexplained weight change",
+        "heart racing or palpitations",
+        "unusual tiredness or restlessness",
+        "swelling in the neck",
+    ]),
+    ({"creatinine", "urea", "bun", "egfr", "sodium", "potassium"}, [
+        "reduced or dark urine output",
+        "swelling in the legs, ankles, or face",
+        "unusual muscle weakness or cramping",
+        "persistent nausea",
+    ]),
+    ({"cholesterol", "ldl", "hdl", "triglyceride", "troponin", "bp_systolic",
+      "bp_diastolic", "blood pressure"}, [
+        "chest pain or pressure",
+        "shortness of breath",
+        "irregular heartbeat",
+        "severe headache",
+    ]),
+    ({"alt", "ast", "bilirubin", "liver"}, [
+        "yellowing of skin or eyes",
+        "dark urine or pale stools",
+        "persistent nausea or loss of appetite",
+        "unusual abdominal pain",
+    ]),
+]
+
+_SYMPTOM_RED_FLAGS: list[tuple[set[str], list[str]]] = [
+    ({"headache"}, ["severe or sudden worsening headache", "visual changes", "neck stiffness"]),
+    ({"fever", "temperature", "chills"}, ["fever above 102°F (39°C)", "fever lasting more than 3 days", "rash accompanying fever"]),
+    ({"cough"}, ["coughing up blood", "worsening breathlessness", "chest pain with coughing"]),
+    ({"nausea", "vomiting"}, ["inability to keep fluids down", "signs of dehydration", "blood in vomit"]),
+    ({"dizzy", "dizziness"}, ["fainting or near-fainting", "difficulty walking or balancing"]),
+    ({"fatigue", "tired", "tiredness"}, ["fatigue that doesn't improve with rest", "shortness of breath with light activity"]),
+]
+
+
+def _build_contextual_fallback_red_flags(
+    flagged_items: list[dict],
+    symptoms: list[str],
+) -> list[str]:
+    """
+    Build a red-flags list from the patient's actual flagged biomarkers
+    and reported symptoms when no specific _RED_FLAG_PATTERNS entry
+    matched. Falls back to _DEFAULT_RED_FLAGS only if nothing usable
+    is available (e.g. a completely empty report).
+    """
+    flags: list[str] = []
+    seen: set[str] = set()
+
+    def _add_all(items: list[str]) -> None:
+        for f in items:
+            key = f.lower()
+            if key not in seen:
+                seen.add(key)
+                flags.append(f)
+
+    # Collect one representative flag per matched SYSTEM first (round-robin
+    # across systems, not all-of-system-1-then-all-of-system-2), so a
+    # multi-system report (e.g. hematologic + thyroid) doesn't have an
+    # earlier-sorted system's flags consume the whole cap before a later
+    # system gets a turn. Each system contributes its flags in its own
+    # priority order across successive rounds.
+    matched_system_flags: list[list[str]] = []
+    for item in flagged_items or []:
+        text = f"{item.get('key') or ''} {item.get('name') or ''}".lower()
+        for keywords, system_flags in _SYSTEM_RED_FLAGS:
+            if any(kw in text for kw in keywords):
+                if system_flags not in matched_system_flags:
+                    matched_system_flags.append(system_flags)
+                break  # one system match per item is enough
+
+    matched_symptom_flags: list[list[str]] = []
+    for s in symptoms or []:
+        s_lower = str(s).lower()
+        for keywords, symptom_flags in _SYMPTOM_RED_FLAGS:
+            if any(kw in s_lower for kw in keywords):
+                if symptom_flags not in matched_symptom_flags:
+                    matched_symptom_flags.append(symptom_flags)
+                break
+
+    all_groups = matched_system_flags + matched_symptom_flags
+    max_rounds = max((len(g) for g in all_groups), default=0)
+    for round_idx in range(max_rounds):
+        for group in all_groups:
+            if round_idx < len(group):
+                _add_all([group[round_idx]])
+
+    if not flags:
+        return list(_DEFAULT_RED_FLAGS)
+
+    # Always keep a couple of universal emergency flags at the end so
+    # nothing critical gets dropped just because it wasn't system-matched.
+    for universal in ("breathing difficulty", "chest pain or pressure"):
+        if universal.lower() not in seen:
+            flags.append(universal)
+
+    return flags[:8]
+
 
 # ═══════════════════════════════════════════════════════════════════
 # UNIVERSAL KEY MATCHER
@@ -999,8 +1131,17 @@ def _select_red_flag_pattern(
     return None
 
 
-def _build_red_flags_phrase(pattern: dict | None) -> str:
-    flags = (pattern.get("red_flags") if pattern else None) or _DEFAULT_RED_FLAGS
+def _build_red_flags_phrase(
+    pattern: dict | None,
+    flagged_items: list[dict] | None = None,
+    symptoms: list[str] | None = None,
+) -> str:
+    if pattern:
+        flags = pattern.get("red_flags") or _DEFAULT_RED_FLAGS
+    else:
+        flags = _build_contextual_fallback_red_flags(
+            flagged_items or [], symptoms or [],
+        )
     return f"Watch for red flags: {', '.join(flags)}."
 
 
@@ -1122,7 +1263,7 @@ def build_dynamic_recommendations(
             summary_line = summary_line[:1].upper() + summary_line[1:]
             lines.append(f"- {summary_line}")
 
-        red_flags_line = _build_red_flags_phrase(matched_pattern)
+        red_flags_line = _build_red_flags_phrase(matched_pattern, flagged_items, symptoms)
         if red_flags_line:
             lines.append(f"- {red_flags_line}")
 

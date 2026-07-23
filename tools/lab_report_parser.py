@@ -200,7 +200,29 @@ def _detect_abnormal(key: str, value: float) -> str | None:
         if value > 1.3:
             return f"High creatinine: {value} mg/dL (elevated above 1.3)"
         return None
+    if key == "mchc":
+        if value < 32.0:
+            return f"Low MCHC: {value} g/dL (threshold < 32.0)"
+        if value > 36.0:
+            return f"High MCHC: {value} g/dL (threshold > 36.0)"
+        return None
+    if key == "mch":
+        if value < 27.0:
+            return f"Low MCH: {value} pg (threshold < 27.0)"
+        if value > 31.0:
+            return f"High MCH: {value} pg (threshold > 31.0)"
+        return None
+    if key == "t3":
+        # Values are normalized to ng/mL before reaching this check
+        # (see unit_normalizer). Kept in sync with _is_flagged's generic
+        # ref-range path so parse-time and report-time never diverge again.
+        if value < 0.87:
+            return f"Low Total T3: {value} ng/mL (threshold < 0.87)"
+        if value > 1.78:
+            return f"High Total T3: {value} ng/mL (threshold > 1.78)"
+        return None
     return None
+
 
 
 # ── Regex patterns ────────────────────────────────────────────────
@@ -529,6 +551,78 @@ _NOISE_SUBSTRINGS: list[str] = [
 ]
 
 
+# ═══════════════════════════════════════════════════════════════════
+# UNIVERSAL IDENTIFIER/ADMIN-FIELD REJECTION
+#
+# Denylisting every possible admin-field phrasing ("Lab No/Result No",
+# "Acc No", "Barcode Ref", "Sample ID No"...) does not scale — any lab
+# format can introduce a new one, as seen with "Lab No/Result No"
+# slipping past the exact-match "lab no" entry. Instead we reject
+# *structurally*: if identifier/admin words dominate the candidate
+# name (regardless of exact phrasing), treat it as administrative
+# noise. This catches any lab format past, present, and future.
+# ═══════════════════════════════════════════════════════════════════
+
+_IDENTIFIER_WORDS = {
+    "no", "num", "number", "id", "code", "ref", "reference",
+    "barcode", "registration", "regn", "regt", "reg", "accession",
+    "acc", "serial", "srl", "sr", "uhid", "mrn", "ipd", "opd",
+    "slip", "receipt", "invoice", "bill", "token", "case",
+    "lab", "result", "report", "form", "file", "doc", "document",
+    "patient", "visit", "session", "job", "record", "entry",
+}
+
+_CONNECTOR_WORDS = {"and", "or", "the", "of", "a", "an"}
+
+
+def _looks_like_identifier_field(n: str) -> bool:
+    """True if the normalized name is dominated by identifier/admin
+    tokens — catches any phrasing of "Lab No/Result No", "Acc No",
+    "Sample ID No", "Lab Ref No UHID", "Barcode Ref No", etc.,
+    without enumerating exact strings.
+
+    Rules:
+      1. Empty → True.
+      2. Every content word is identifier/connector → True (strict).
+      3. ≥ 2 identifier words AND identifier words are ≥ 60% of
+         total content words → True (dominant-identifier case,
+         catches "Lab No/Result No", "Sample Barcode ID", etc. even
+         if a stray non-identifier token slips in from OCR).
+      4. ≥ 2 identifier words AND any strong admin marker present
+         (no, id, code, uhid, mrn, barcode, accession) → True
+         (short admin fields like "Lab No", "Acc No", "Ref Code").
+
+    Kept intentionally structural rather than by exact phrase so any
+    lab format's header/ID field is caught universally without ever
+    needing a new denylist entry.
+    """
+    words = n.split()
+    if not words:
+        return True
+
+    non_connector = [w for w in words if w not in _CONNECTOR_WORDS]
+    if not non_connector:
+        return True
+
+    identifier_hits = sum(1 for w in non_connector if w in _IDENTIFIER_WORDS)
+    total = len(non_connector)
+
+    # Rule 2: strict — every content word is an identifier
+    if identifier_hits == total:
+        return True
+
+    # Rule 3: dominant identifier ratio
+    if identifier_hits >= 2 and (identifier_hits / total) >= 0.6:
+        return True
+
+    # Rule 4: strong admin marker plus at least one other identifier
+    strong_markers = {"no", "id", "code", "uhid", "mrn", "barcode", "accession"}
+    if identifier_hits >= 2 and any(w in strong_markers for w in non_connector):
+        return True
+
+    return False
+
+
 def _is_noise_name(name: str) -> bool:
     n = re.sub(r"[:;,.\-–—_/\\|]+", " ", name).strip().lower()
     n = re.sub(r"\s+", " ", n)
@@ -570,6 +664,22 @@ def _is_noise_name(name: str) -> bool:
             "id no", "s no", "s/no", "s.no",
         }:
             return True
+
+    # UNIVERSAL: any combination of identifier/admin words
+    # ("lab no result no", "acc no", "sample id no", "barcode ref no", ...)
+    # Rejects structurally rather than by exact phrase, so any lab's
+    # header/ID field is caught without needing a new denylist entry.
+    if _looks_like_identifier_field(n):
+        return True
+
+    # UNIVERSAL: reject bare 1-2 letter alphabetic fragments not
+    # already recognized as a real clinical token. Legit short test
+    # names (T3, T4, RBC, WBC, TSH, HB...) are handled separately via
+    # _NAME_EMBEDDED_TOKENS / resolve_canonical_key upstream; anything
+    # this short reaching here is far more likely OCR/column debris
+    # (e.g. "Mc", "Sr", "Dt") than an actual biomarker.
+    if len(n) <= 2 and n.isalpha():
+        return True
 
     return False
 
@@ -705,6 +815,21 @@ def _extract_rows(text: str) -> list[dict]:
                 name=name, line=line,
             )
             continue
+
+        # Diagnostic: log identifier-shaped names that somehow slipped
+        # past the noise filter (should be zero — surfaces regressions
+        # like the "Lab No/Result No" leak). Kept at WARNING so it
+        # shows up in production logs without requiring debug level.
+        _norm_probe = re.sub(r"[:;,.\-–—_/\\|]+", " ", name).strip().lower()
+        _norm_probe = re.sub(r"\s+", " ", _norm_probe)
+        _probe_words = _norm_probe.split()
+        _probe_id_hits = sum(1 for w in _probe_words if w in _IDENTIFIER_WORDS)
+        if _probe_words and _probe_id_hits >= 2 and _probe_id_hits / len(_probe_words) >= 0.5:
+            logger.warning(
+                "lab_report_parser · suspicious identifier-shaped name accepted — "
+                "please report this so filter can be tightened",
+                name=name, normalized=_norm_probe, line=line,
+            )
 
         name_end_in_line = len(name)
         value_match = num_match

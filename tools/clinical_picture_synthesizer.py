@@ -32,6 +32,15 @@ Row 3 dashboard support:
   card prefers this short form; falls back to the full `narrative`
   when a pattern predates the short-form field.
 
+Biomarker fallback (universal):
+  When text-finding and clinical-synthesis patterns produce no
+  narratives (e.g. only "reassuring" smear patterns matched but
+  numeric biomarkers are flagged), _generate_biomarker_findings()
+  synthesizes clinical picture entries directly from flagged
+  measurements. This ensures the clinical picture is never empty
+  for reports with actual abnormalities. The same output feeds both
+  the dashboard card and the report body.
+
 Consumed by:
   tools.report_generator._build_deterministic_report() — hooks the
   synthesizer after clinical_synthesis has run, and renders the
@@ -89,6 +98,245 @@ _MULTI_TRIGGER_BOOST = 0.06
 #   Legacy sentinel — retained for any external reference.
 #   Scoring uses _ambiguity_penalty() function, not this constant.
 _AMBIGUITY_PENALTY_FLAT = 0.10
+
+
+# ═══════════════════════════════════════════════════════════════════
+# BIOMARKER CLINICAL MEANING LOOKUP
+# Used by _generate_biomarker_findings() when text-finding and
+# clinical-synthesis patterns produce no narratives. Provides a
+# 1-sentence explanation of what each abnormality means clinically.
+# Keys are canonical biomarker names (lowercase, underscored).
+# ═══════════════════════════════════════════════════════════════════
+
+_BIOMARKER_CLINICAL_MEANINGS: dict[str, dict[str, str]] = {
+    # ── Red cell indices ─────────────────────────────────────────
+    "haemoglobin": {
+        "low": "which may indicate anemia — iron studies and reticulocyte count are recommended to determine the underlying cause",
+        "high": "which may be seen with dehydration, polycythemia, or chronic hypoxia — clinical correlation is recommended",
+    },
+    "hemoglobin": {
+        "low": "which may indicate anemia — iron studies and reticulocyte count are recommended to determine the underlying cause",
+        "high": "which may be seen with dehydration, polycythemia, or chronic hypoxia — clinical correlation is recommended",
+    },
+    "mchc": {
+        "low": "which may indicate hypochromic anemia — iron studies including ferritin and transferrin saturation are recommended",
+        "high": "which may be seen with spherocytosis or certain hemolytic conditions — clinical correlation is recommended",
+    },
+    "mcv": {
+        "low": "suggesting microcytic red cells — iron deficiency or thalassemia trait should be evaluated",
+        "high": "suggesting macrocytic red cells — Vitamin B12 and folate levels should be checked",
+    },
+    "mch": {
+        "low": "indicating reduced hemoglobin per red cell — often accompanies iron deficiency",
+        "high": "indicating increased hemoglobin per red cell — often seen with B12/folate deficiency",
+    },
+    "rdw": {
+        "high": "indicating significant variation in red cell size (anisocytosis) — further evaluation for mixed or evolving anemia is recommended",
+    },
+    "hematocrit": {
+        "low": "which may indicate anemia or blood loss — clinical correlation is recommended",
+        "high": "which may be seen with dehydration or polycythemia — clinical correlation is recommended",
+    },
+    "rbc": {
+        "low": "which may indicate anemia — full CBC review and iron studies are recommended",
+        "high": "which may be seen with dehydration or polycythemia — clinical correlation is recommended",
+    },
+
+    # ── White cell counts ────────────────────────────────────────
+    "wbc": {
+        "low": "which may indicate leukopenia — infection risk assessment and repeat CBC are recommended",
+        "high": "which may indicate infection, inflammation, or stress response — clinical correlation with symptoms is recommended",
+    },
+    "neutrophils": {
+        "low": "which may increase susceptibility to bacterial infections — monitor for fever and seek care if symptomatic",
+        "high": "commonly seen with bacterial infections or acute stress response — clinical correlation is recommended",
+    },
+    "lymphocytes": {
+        "low": "which may be seen with viral infections, immunosuppression, or steroid use",
+        "high": "commonly associated with viral infections or chronic inflammatory conditions",
+    },
+    "eosinophils": {
+        "high": "which may suggest allergic conditions, parasitic infections, or eosinophilic disorders",
+    },
+    "monocytes": {
+        "high": "which may be seen with chronic infections, autoimmune conditions, or recovery from acute infection",
+    },
+    "basophils": {
+        "high": "which may be seen with allergic reactions or certain myeloproliferative disorders",
+    },
+
+    # ── Platelets ────────────────────────────────────────────────
+    "platelets": {
+        "low": "which may indicate thrombocytopenia — avoid NSAIDs and trauma; evaluation for the underlying cause is recommended",
+        "high": "which may indicate reactive thrombocytosis from infection or inflammation — clinical correlation is recommended",
+    },
+    "mpv": {
+        "low": "which may be seen in certain marrow disorders — clinical correlation is recommended",
+        "high": "indicating larger, younger platelets — often reflects active platelet production",
+    },
+
+    # ── Thyroid ──────────────────────────────────────────────────
+    "tsh": {
+        "low": "which may indicate hyperthyroidism or thyroid suppression — Free T3 and Free T4 should be evaluated",
+        "high": "which may indicate hypothyroidism — Free T4 evaluation and clinical correlation are recommended",
+    },
+    "t3": {
+        "low": "which may be seen with hypothyroidism or non-thyroidal illness",
+        "high": "which may indicate hyperthyroidism — please discuss with your physician for a full thyroid evaluation",
+    },
+    "free_t3": {
+        "low": "which may be seen with hypothyroidism or sick euthyroid syndrome",
+        "high": "which may indicate hyperthyroidism — clinical evaluation is recommended",
+    },
+    "t4": {
+        "low": "which may indicate hypothyroidism — TSH correlation is essential",
+        "high": "which may indicate hyperthyroidism or excess thyroid hormone",
+    },
+    "free_t4": {
+        "low": "which may indicate hypothyroidism",
+        "high": "which may indicate hyperthyroidism — clinical evaluation is recommended",
+    },
+
+    # ── Metabolic ────────────────────────────────────────────────
+    "glucose": {
+        "low": "which may indicate hypoglycemia — monitor for symptoms and discuss with your physician",
+        "high": "which may indicate impaired glucose regulation or diabetes — HbA1c and fasting glucose are recommended",
+    },
+    "hba1c": {
+        "high": "indicating suboptimal long-term glucose control — dietary review and medication adjustment should be discussed",
+    },
+    "insulin": {
+        "high": "which may indicate insulin resistance — metabolic evaluation is recommended",
+    },
+
+    # ── Renal ────────────────────────────────────────────────────
+    "creatinine": {
+        "high": "which may indicate impaired kidney function — eGFR calculation and renal workup are recommended",
+    },
+    "urea": {
+        "high": "which may reflect dehydration, high protein intake, or impaired kidney function",
+    },
+    "bun": {
+        "high": "which may reflect dehydration, high protein intake, or impaired kidney function",
+    },
+    "uric_acid": {
+        "high": "which may increase the risk of gout or kidney stones — dietary modification and hydration are recommended",
+    },
+    "egfr": {
+        "low": "indicating reduced kidney filtration — nephrology evaluation is recommended",
+    },
+
+    # ── Hepatic ──────────────────────────────────────────────────
+    "alt": {
+        "high": "which may indicate liver cell injury — further liver function evaluation is recommended",
+    },
+    "ast": {
+        "high": "which may indicate liver or muscle injury — clinical correlation is recommended",
+    },
+    "alp": {
+        "high": "which may indicate liver or bone pathology — GGT and clinical correlation are recommended",
+    },
+    "ggt": {
+        "high": "which may indicate liver disease or biliary obstruction — further liver workup is recommended",
+    },
+    "bilirubin": {
+        "high": "which may indicate hemolysis, liver disease, or biliary obstruction",
+    },
+    "albumin": {
+        "low": "which may indicate malnutrition, chronic liver disease, or nephrotic syndrome",
+    },
+    "total_protein": {
+        "low": "which may indicate malnutrition or protein-losing conditions",
+        "high": "which may indicate chronic inflammation or plasma cell disorders",
+    },
+    "a_g_ratio": {
+        "low": "which may indicate liver disease, nephrotic syndrome, or chronic inflammation",
+    },
+    "globulin": {
+        "high": "which may indicate chronic inflammation, infection, or immune disorders",
+    },
+
+    # ── Lipid panel ──────────────────────────────────────────────
+    "cholesterol": {
+        "high": "which increases cardiovascular risk — dietary modification and lipid management should be discussed",
+    },
+    "ldl": {
+        "high": "which increases cardiovascular risk — lifestyle changes and possible statin therapy should be discussed",
+    },
+    "hdl": {
+        "low": "which reduces cardiovascular protection — regular exercise and dietary changes are recommended",
+    },
+    "triglycerides": {
+        "high": "which increases cardiovascular and pancreatitis risk — dietary modification is recommended",
+    },
+
+    # ── Electrolytes ─────────────────────────────────────────────
+    "sodium": {
+        "low": "which may indicate dilutional hyponatremia or SIADH — clinical correlation is needed",
+        "high": "which may indicate dehydration — hydration status should be assessed",
+    },
+    "potassium": {
+        "low": "which may cause muscle weakness or cardiac arrhythmias — dietary supplementation may be needed",
+        "high": "which may affect cardiac conduction — ECG and clinical review are recommended",
+    },
+    "calcium": {
+        "low": "which may cause muscle cramps or cardiac issues — Vitamin D and PTH evaluation may be needed",
+        "high": "which may indicate hyperparathyroidism or malignancy — PTH level and clinical evaluation are recommended",
+    },
+    "magnesium": {
+        "low": "which may cause muscle cramps or arrhythmias — supplementation may be needed",
+        "high": "which may affect neuromuscular function — clinical review is recommended",
+    },
+    "chloride": {
+        "low": "which may accompany certain acid-base or GI conditions — clinical correlation is recommended",
+        "high": "which may accompany dehydration or acid-base disturbances",
+    },
+    "bicarbonate": {
+        "low": "which may indicate metabolic acidosis — clinical evaluation is recommended",
+        "high": "which may indicate metabolic alkalosis — clinical evaluation is recommended",
+    },
+
+    # ── Iron studies ─────────────────────────────────────────────
+    "iron": {
+        "low": "which supports iron deficiency — ferritin and TIBC should be evaluated",
+    },
+    "ferritin": {
+        "low": "confirming depleted iron stores — iron supplementation and dietary changes should be discussed",
+        "high": "which may indicate iron overload, inflammation, or liver disease",
+    },
+    "tibc": {
+        "high": "which supports iron deficiency — iron supplementation may be indicated",
+    },
+
+    # ── Vitamins ─────────────────────────────────────────────────
+    "vitamin_d": {
+        "low": "which may affect bone health and immunity — supplementation should be discussed with your physician",
+    },
+    "vitamin_b12": {
+        "low": "which may cause neurological symptoms and macrocytic anemia — B12 supplementation is recommended",
+    },
+    "folate": {
+        "low": "which may contribute to macrocytic anemia — folate supplementation is recommended",
+    },
+
+    # ── Inflammation ─────────────────────────────────────────────
+    "crp": {
+        "high": "indicating active inflammation — the source of inflammation should be investigated",
+    },
+    "esr": {
+        "high": "indicating active inflammation or infection — clinical correlation is recommended",
+    },
+
+    # ── Tumor markers ────────────────────────────────────────────
+    "psa": {
+        "high": "which may warrant urological evaluation — clinical correlation and follow-up testing are recommended",
+    },
+
+    # ── Cardiac ──────────────────────────────────────────────────
+    "troponin": {
+        "high": "which may indicate cardiac injury — urgent cardiology evaluation is required",
+    },
+}
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -315,6 +563,11 @@ def _resolve_all_matched_patterns(
         "triggers":        dict,            # for scoring
         "priority":        int,             # optional
       }
+
+    Universal skip rule: reassuring text-finding patterns with no
+    observation (e.g. "normocytic normochromic", "platelets adequate")
+    are excluded because they carry no clinical narrative and would
+    surface as empty "Pattern: <id>" rows in the dashboard.
     """
     resolved: list[dict] = []
 
@@ -333,10 +586,22 @@ def _resolve_all_matched_patterns(
                 "priority": 0,
             })
             continue
+
+        # ── SKIP reassuring patterns with no observation ──────────────
+        # These are patterns like "normocytic normochromic RBCs" or
+        # "platelets adequate" — they confirm normality but add no
+        # clinical narrative. Including them produces empty rows in
+        # the dashboard Clinical Picture card that read only as
+        # "Pattern: Smear Normocytic Normochromic" with no context.
+        severity_class = str(raw.get("severity_class") or "").lower()
+        observation = raw.get("observation")
+        if severity_class == "reassuring" and not observation:
+            continue
+
         resolved.append({
             "id": pid,
             "source": "text_finding",
-            "narrative": raw.get("observation"),
+            "narrative": observation,
             "narrative_short": raw.get("narrative_short"),
             "triggers": raw.get("triggers", {}) or {},
             "priority": 0,
@@ -395,6 +660,175 @@ def _resolve_all_matched_patterns(
         })
 
     return resolved
+
+
+# ═══════════════════════════════════════════════════════════════════
+# BIOMARKER FINDING GENERATOR (UNIVERSAL FALLBACK)
+# ═══════════════════════════════════════════════════════════════════
+# When text-finding and clinical-synthesis patterns produce no
+# narratives — but the report has actual flagged biomarkers — this
+# generator creates clinical picture entries directly from the
+# measurements so the card is never empty for clinically meaningful
+# reports. The output feeds both the dashboard card and the report
+# body via the same synthesize_clinical_picture() return value.
+# ═══════════════════════════════════════════════════════════════════
+
+def _build_biomarker_narrative(
+    name: str,
+    direction: str,
+    direction_label: str,
+    value_str: str,
+) -> str:
+    """
+    Compose a 1-sentence clinical narrative for a flagged biomarker.
+    Uses _BIOMARKER_CLINICAL_MEANINGS lookup. Falls back to a generic
+    but still informative sentence for unmapped biomarkers so the
+    card is never blank.
+    """
+    key = name.lower().replace(" ", "_").replace("/", "_").replace("-", "_")
+    meanings = _BIOMARKER_CLINICAL_MEANINGS.get(key, {})
+    clinical_meaning = meanings.get(direction, "")
+
+    if clinical_meaning:
+        return f"{direction_label} {name}{value_str}, {clinical_meaning}."
+
+    # Generic fallback — still informative
+    return (
+        f"{direction_label} {name}{value_str} — this result is outside "
+        f"the expected range and should be discussed with your clinician "
+        f"for appropriate evaluation."
+    )
+
+
+def _generate_biomarker_findings(
+    flagged_items: list[dict],
+    scoring_context: dict,
+    total_matched: int,
+) -> list[dict]:
+    """
+    Generate clinical picture entries from flagged numeric biomarkers.
+
+    Used as a universal fallback when text-finding and clinical
+    synthesis patterns are absent or only reassuring — ensures every
+    report with meaningful abnormalities shows real clinical content.
+
+    Only generates entries for biomarkers with risk_score >= 1 (i.e.
+    actually flagged, not normal). Each entry gets a dynamically
+    composed narrative describing the abnormality's clinical meaning.
+
+    Confidence is derived from the same universal formula as pattern
+    scoring: base + severity-based boost + context signals - ambiguity.
+    """
+    if not flagged_items:
+        return []
+
+    entries: list[dict] = []
+
+    for item in flagged_items:
+        risk_score = item.get("risk_score")
+        if not isinstance(risk_score, (int, float)) or risk_score < 1:
+            continue
+
+        name = item.get("name") or item.get("vital") or ""
+        if not name:
+            continue
+
+        key = item.get("key") or name.lower().replace(" ", "_")
+        status = str(item.get("status") or "").lower()
+        display_value = item.get("display_value") or ""
+        unit = item.get("unit") or ""
+
+        # ── Imaging findings (X-ray, etc.) use their own phrasing ──────
+        # These arrive with display_value == name (e.g. "Consolidation")
+        # since there's no numeric value — the numeric-biomarker template
+        # below ("Low X at Y g/dl") produces nonsense like "Abnormal
+        # Consolidation at Consolidation" if applied here. Use a
+        # detection-appropriate sentence instead.
+        if item.get("source") == "imaging" or item.get("category") == "imaging":
+            narrative = (
+                f"{name} was detected on chest X-ray imaging and requires "
+                f"clinical review."
+            )
+            narrative_short = f"{name} detected on imaging"
+
+            base = _BASE_SCORE
+            severity_boost = 0.24 if risk_score >= 2 else 0.12
+            context_boost = 0.0
+            if scoring_context.get("has_symptoms"):
+                context_boost += _SIGNAL_BOOST_PER_TYPE
+            if scoring_context.get("has_patient_conditions"):
+                context_boost += _SIGNAL_BOOST_PER_TYPE
+            total_boost = min(severity_boost + context_boost, _MAX_SIGNAL_BOOST)
+            confidence = round(
+                max(0.0, min(1.0,
+                    base + total_boost - _ambiguity_penalty(total_matched)
+                )), 3
+            )
+
+            entries.append({
+                "id":              f"biomarker_{key}_imaging",
+                "source":          "biomarker_flag",
+                "narrative":       narrative,
+                "narrative_short": narrative_short,
+                "confidence":      confidence,
+                "priority":        item.get("risk_score", 0) * 10,
+            })
+            continue
+
+        # ── Determine direction from status ───────────────────────────
+        if "low" in status:
+            direction = "low"
+            direction_label = "Low"
+        elif "high" in status or "elevated" in status:
+            direction = "high"
+            direction_label = "Elevated"
+        elif "borderline" in status:
+            direction = "borderline"
+            direction_label = "Borderline"
+        else:
+            direction = "abnormal"
+            direction_label = "Abnormal"
+
+        # ── Compose narratives ────────────────────────────────────────
+        value_str = f" at {display_value}" if display_value else ""
+        narrative = _build_biomarker_narrative(
+            name, direction, direction_label, value_str
+        )
+        narrative_short = f"{direction_label} {name}{value_str}"
+
+        # ── Score (universal formula) ─────────────────────────────────
+        # Higher risk_score → larger severity boost, still capped by
+        # _MAX_SIGNAL_BOOST. Context signals still apply.
+        base = _BASE_SCORE
+        if risk_score >= 2:
+            severity_boost = 0.24
+        else:
+            severity_boost = 0.12
+
+        context_boost = 0.0
+        if scoring_context.get("has_symptoms"):
+            context_boost += _SIGNAL_BOOST_PER_TYPE
+        if scoring_context.get("has_patient_conditions"):
+            context_boost += _SIGNAL_BOOST_PER_TYPE
+
+        total_boost = min(severity_boost + context_boost, _MAX_SIGNAL_BOOST)
+
+        confidence = round(
+            max(0.0, min(1.0,
+                base + total_boost - _ambiguity_penalty(total_matched)
+            )), 3
+        )
+
+        entries.append({
+            "id":              f"biomarker_{key}_{direction}",
+            "source":          "biomarker_flag",
+            "narrative":       narrative,
+            "narrative_short": narrative_short,
+            "confidence":      confidence,
+            "priority":        50 if risk_score >= 2 else 25,
+        })
+
+    return entries
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -516,6 +950,12 @@ def synthesize_clinical_picture(
     Aggregate matched patterns across all three registries, score each
     by confidence, and produce a unified clinical picture.
 
+    Universal biomarker fallback: when no text-finding or clinical
+    synthesis pattern surfaces a narrative, but the report contains
+    flagged numeric biomarkers, this function synthesizes narratives
+    directly from those biomarkers via _generate_biomarker_findings().
+    Same output feeds both dashboard card and report body.
+
     Args:
         flagged_items:         All flagged measurements (any non-normal status)
         symptoms:              Reported symptoms (strings)
@@ -554,14 +994,14 @@ def synthesize_clinical_picture(
             safety_rule_ids or [],
         )
 
-        if not resolved:
-            return {
-                "confident_findings": [],
-                "differential_findings": [],
-                "clinical_picture_summary": "",
-                "confidence_scores": {},
-                "all_scored_patterns": [],
-            }
+        # ── Build scoring context (needed even if resolved is empty
+        #    because biomarker fallback uses it) ──────────────────────
+        scoring_context = _build_scoring_context(
+            flagged_items or [],
+            symptoms or [],
+            patient_context or {},
+            text_pattern_ids or [],
+        )
 
         # ── Deduplicate by (id, source) ────────────────────────────────
         # The same pattern can theoretically appear from multiple sources
@@ -574,14 +1014,6 @@ def synthesize_clinical_picture(
                 continue
             seen.add(key)
             unique.append(p)
-
-        # ── Build scoring context ──────────────────────────────────────
-        scoring_context = _build_scoring_context(
-            flagged_items or [],
-            symptoms or [],
-            patient_context or {},
-            text_pattern_ids or [],
-        )
 
         total_matched = len(unique)
 
@@ -605,6 +1037,31 @@ def synthesize_clinical_picture(
         # ── Categorize by confidence bands ─────────────────────────────
         confident, differential = _categorize_by_confidence(scored)
 
+        # ── UNIVERSAL BIOMARKER FALLBACK ───────────────────────────────
+        # If no text/clinical/safety findings surfaced a narrative, but
+        # the report has actual flagged biomarkers, synthesize findings
+        # directly from those biomarkers. Prevents the clinical picture
+        # from ever being empty for reports with real abnormalities.
+        # Applies universally to every report — dashboard AND report body.
+        if not confident and not differential and (flagged_items or []):
+            biomarker_entries = _generate_biomarker_findings(
+                flagged_items or [],
+                scoring_context,
+                total_matched + len(flagged_items or []),
+            )
+            if biomarker_entries:
+                scored.extend(biomarker_entries)
+                for entry in biomarker_entries:
+                    confidence_scores[entry["id"]] = entry["confidence"]
+
+                # Re-categorize with biomarker entries included
+                confident, differential = _categorize_by_confidence(scored)
+
+                logger.info(
+                    "clinical_picture_synthesizer · biomarker fallback used",
+                    biomarker_count=len(biomarker_entries),
+                )
+
         # ── Compose summary paragraph ──────────────────────────────────
         summary = _compose_clinical_picture_summary(confident, differential)
 
@@ -613,7 +1070,7 @@ def synthesize_clinical_picture(
             total_matched=total_matched,
             confident_count=len(confident),
             differential_count=len(differential),
-            subthreshold=total_matched - len(confident) - len(differential),
+            subthreshold=len(scored) - len(confident) - len(differential),
         )
 
         return {

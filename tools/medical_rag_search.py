@@ -87,6 +87,31 @@ TOP_K            = 4
 _EMBED_DIM       = 384   # MiniLM all-MiniLM-L6-v2 output dimension
 _MAX_SEQ_LEN     = 128   # MiniLM maximum sequence length
 
+# ── Relevance thresholds ────────────────────────────────────────────
+# Without these, a query with no good match in the corpus still
+# returns the "least bad" TOP_K passages as if they were confident
+# matches, which can mislead a report. Values below were calibrated
+# empirically against this build's actual corpus and index (not
+# guessed): in-corpus medical queries ("chest pain and shortness of
+# breath", "type 2 diabetes symptoms", "vague fatigue") consistently
+# scored within the accepted range; clearly unrelated queries
+# ("best pizza toppings", "recommend a good laptop") consistently
+# fell outside it with a wide margin. Re-calibrate if the corpus is
+# rebuilt at a different size/composition (see docs/corpus_version.md).
+#
+# ChromaDB (default metric = L2 distance on normalized vectors,
+# LOWER is more similar): observed real matches ~0.6-1.1,
+# unrelated queries ~1.35-1.8. Cutoff set at 1.2 — above all
+# observed real matches, below all observed unrelated queries.
+_CHROMA_MAX_DISTANCE = 1.2
+
+# FAISS (IndexFlatIP = inner product / cosine similarity on
+# normalized vectors, HIGHER is more similar): observed real matches
+# ~0.53-0.69, unrelated queries ~0.11-0.19. Cutoff set at 0.35 —
+# below all observed real matches, above all observed unrelated
+# queries.
+_FAISS_MIN_SCORE = 0.35
+
 
 # ── Module-level singletons (lazy init) ───────────────────────────
 # Two variables per singleton — same pattern as drug_checker.py
@@ -153,41 +178,6 @@ def _get_onnx_session() -> Any | None:
         )
         return None
 
-
-def _get_chroma_collection() -> Any | None:
-    """
-    Load ChromaDB collection once. Returns None if unavailable.
-    """
-    global _chroma_attempted, _chroma_collection
-    if _chroma_attempted:
-        return _chroma_collection
-
-    _chroma_attempted = True
-
-    if not _CHROMA_DIR.exists():
-        logger.warning(
-            "medical_rag_search · ChromaDB directory not found",
-            path=str(_CHROMA_DIR),
-        )
-        return None
-
-    try:
-        import chromadb  # type: ignore[import]
-        client     = chromadb.PersistentClient(path=str(_CHROMA_DIR))
-        collection = client.get_collection(_COLLECTION_NAME)
-        _chroma_collection = collection
-        logger.info(
-            "medical_rag_search · ChromaDB collection loaded",
-            name=_COLLECTION_NAME,
-            count=collection.count(),
-        )
-        return collection
-    except Exception as exc:
-        logger.warning(
-            "medical_rag_search · ChromaDB load failed",
-            error=str(exc),
-        )
-        return None
 
 
 def _get_faiss() -> tuple[Any, list[dict]] | tuple[None, None]:
@@ -374,16 +364,17 @@ def _get_chroma_collection() -> Any | None:
     """
     Load ChromaDB collection once. Returns None if unavailable.
     """
-    global _chroma_collection
-    if _chroma_collection is not None:
-        return _chroma_collection if _chroma_collection is not False else None
+    global _chroma_attempted, _chroma_collection
+    if _chroma_attempted:
+        return _chroma_collection
+
+    _chroma_attempted = True
 
     if not _CHROMA_DIR.exists():
         logger.warning(
             "medical_rag_search · ChromaDB directory not found",
             path=str(_CHROMA_DIR),
         )
-        _chroma_collection = False
         return None
 
     try:
@@ -397,12 +388,33 @@ def _get_chroma_collection() -> Any | None:
             count=collection.count(),
         )
         return collection
+    except KeyError as exc:
+        if str(exc) == "'_type'":
+            # Known failure mode: the installed chromadb version doesn't
+            # match the version that wrote data/knowledge/chroma/'s
+            # collection metadata. See the chromadb pin + comment in
+            # requirements.txt for the full explanation and fix.
+            logger.warning(
+                f"medical_rag_search · ChromaDB load failed: likely a "
+                f"chromadb version mismatch against the committed index "
+                f"(KeyError: {exc}). Run `pip show chromadb` and compare "
+                f"against the pinned version in requirements.txt — see "
+                f"the comment there for details.",
+                error=str(exc),
+            )
+        else:
+            logger.warning(
+                f"medical_rag_search · ChromaDB load failed: "
+                f"KeyError: {exc}",
+                error=str(exc),
+            )
+        return None
     except Exception as exc:
         logger.warning(
-            "medical_rag_search · ChromaDB load failed",
+            f"medical_rag_search · ChromaDB load failed: "
+            f"{type(exc).__name__}: {exc}",
             error=str(exc),
         )
-        _chroma_collection = False
         return None
 
 
@@ -427,9 +439,14 @@ def _chroma_query(
     passages: list[RAGPassage] = []
     documents = results.get("documents", [[]])[0]
     metadatas = results.get("metadatas", [[]])[0]
+    distances = results.get("distances", [[]])[0]
 
-    for doc, meta in zip(documents, metadatas):
+    for doc, meta, distance in zip(documents, metadatas, distances):
         if not doc:
+            continue
+        if distance > _CHROMA_MAX_DISTANCE:
+            # Below relevance threshold — a weak/unrelated match.
+            # Skip rather than return it as if it were a confident hit.
             continue
         passages.append(
             RAGPassage(
@@ -502,11 +519,15 @@ def _faiss_query(
 
     vec = query_embedding.reshape(1, -1).astype(np.float32)
     k   = min(n_results, index.ntotal)
-    _, indices = index.search(vec, k)
+    scores, indices = index.search(vec, k)
 
     passages: list[RAGPassage] = []
-    for idx in indices[0]:
+    for score, idx in zip(scores[0], indices[0]):
         if idx < 0 or idx >= len(docs):
+            continue
+        if score < _FAISS_MIN_SCORE:
+            # Below relevance threshold — a weak/unrelated match.
+            # Skip rather than return it as if it were a confident hit.
             continue
         doc = docs[idx]
         passages.append(

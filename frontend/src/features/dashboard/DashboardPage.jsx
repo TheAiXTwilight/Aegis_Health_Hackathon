@@ -525,6 +525,80 @@ const SBG = {
   CRITICAL: "rgba(153,27,27,0.04)",
 };
 
+
+/* ───────────────────────────────────────────────────────────────────
+   NAME FORMATTER
+   Capitalises each word of display_name properly.
+   "john doe" → "John Doe"   "MARY JANE" → "Mary Jane"
+   Handles null / undefined / empty gracefully.
+   ─────────────────────────────────────────────────────────────────── */
+function formatDisplayName(name) {
+  if (!name || typeof name !== "string") return "";
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => {
+      if (!word) return "";
+      // Preserve all-caps acronyms (e.g. "MD", "II", "III")
+      if (word.length <= 3 && /^[A-Z]+$/.test(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+
+/* ───────────────────────────────────────────────────────────────────
+   LIGHTWEIGHT MARKDOWN RENDERER
+   Handles the small markdown subset the chat backend emits:
+     **bold**         → <strong>bold</strong>
+     \n\n             → paragraph break
+     \n• item         → bullet list item
+     \n<line>         → soft line break
+   No dependency. XSS-safe: escapes HTML first, then only inserts the
+   handful of tags we control ourselves.
+   ─────────────────────────────────────────────────────────────────── */
+function renderChatMarkdown(text) {
+  if (!text) return null;
+  const escape = (s) =>
+    String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+
+  const paragraphs = String(text).split(/\n{2,}/);
+
+  return paragraphs.map((para, pi) => {
+    const lines = para.split(/\n/);
+    const isBulletBlock = lines.every((l) => /^\s*•\s+/.test(l));
+
+    if (isBulletBlock) {
+      return (
+        <ul key={pi} className="dashv2-chat-md-list">
+          {lines.map((l, li) => {
+            const item = l.replace(/^\s*•\s+/, "");
+            const html = escape(item).replace(
+              /\*\*([^*]+)\*\*/g,
+              "<strong>$1</strong>"
+            );
+            return (
+              <li key={li} dangerouslySetInnerHTML={{ __html: html }} />
+            );
+          })}
+        </ul>
+      );
+    }
+
+    const html = lines
+      .map((l) =>
+        escape(l).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      )
+      .join("<br/>");
+
+    return <p key={pi} className="dashv2-chat-md-p" dangerouslySetInnerHTML={{ __html: html }} />;
+  });
+}
+
+
 /* ═══════════════════════════════════════════════════════════════════
    CLINICAL SVG ICONS — professional monochrome line icons
    Replaces emoji lookup for vital rows. Each icon is a lucide-style
@@ -1106,7 +1180,7 @@ function Strip({ grt, name, sevN, recs, L, nav, co, onTog }) {
     <div className="dashv2-strip">
       <div className="dashv2-strip-left">
         <span className="dashv2-strip-greeting">
-          {grt}, <strong>{name || "there"}</strong>
+          {grt}, <strong>{formatDisplayName(name) || "there"}</strong>
         </span>
       </div>
 
@@ -1698,16 +1772,21 @@ function ClinicalPictureSummaryCard({ picture }) {
   const shortenNarrative = (text) => {
     if (!text) return "";
     let s = String(text).trim();
-    const stop = s.search(/[.!?](\s|$)/);
-    if (stop > 20) s = s.slice(0, stop + 1).trim();
+
+    // ── Remove only boilerplate tail phrases, keep full clinical content ──
     s = s
       .replace(
-        /,?\s*(and\s+)?(clinical correlation.*|viral serology may be considered.*|is recommended\.?|are recommended\.?|should be considered\.?|warrants? clinical.*|may be considered\.?)$/i,
+        /[,.]?\s*(clinical correlation(?:\s+with\s+[^.]*)?(?:\s+is\s+recommended)?\.?|viral serology may be considered[^.]*\.?|further specialist(?:s)? review[^.]*\.?|is recommended\.?|are recommended\.?|should be considered\.?|warrants?\s+clinical\s+[^.]*\.?|may be considered\.?)$/i,
         ""
       )
-      .trim()
-      .replace(/[,\s]+$/, "");
+      .trim();
+
+    // ── Remove trailing punctuation artefacts ──
+    s = s.replace(/[,\s]+$/, "");
+
+    // ── Ensure sentence ends cleanly ──
     if (s && !/[.!?]$/.test(s)) s += ".";
+
     return s;
   };
 
@@ -1718,27 +1797,50 @@ function ClinicalPictureSummaryCard({ picture }) {
 
   const linesFor = (txt) => {
     if (!txt) return 0;
-    if (txt.length <= CHARS_PER_LINE) return 1;
+    if (txt.length <= CHARS_PER_LINE) return 1.5;
     if (txt.length <= CHARS_PER_LINE * 2) return 2;
-    return 3;
+    return 2;
   };
 
   const pickTextForFinding = (f) => {
     const full = shortenNarrative(f.narrative || "");
-    const short = f.narrative_short || "";
-    const idFallback = String(f.id || "").replace(/_/g, " ");
+    const short = f.narrative_short
+      ? shortenNarrative(f.narrative_short)
+      : "";
+    const idFallback = String(f.id || "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
 
-    const candidates = [full, short, idFallback].filter(
-      (t) => t && t.length >= 12
-    );
-    if (!candidates.length) return "";
+    // Priority: full narrative first (richest), then short, then id
+    // Only fall back to shorter form if full is missing or too long
+    const TWO_LINE_MIN = Math.round(CHARS_PER_LINE * 1.1); // ~126 chars
+    const THREE_LINE_MAX = CHARS_PER_LINE * 3;              // ~345 chars
 
-    const threeLineMax = CHARS_PER_LINE * 3;
-    const fits = candidates.filter((t) => t.length <= threeLineMax);
-    if (fits.length) {
-      return fits.sort((a, b) => b.length - a.length)[0];
+    // Full narrative — use if it exists and fits within 3 lines
+    if (full && full.length >= 12 && full.length <= THREE_LINE_MAX) {
+      return full;
     }
-    return candidates.sort((a, b) => a.length - b.length)[0];
+
+    // Full narrative too long — truncate to last complete sentence within budget
+    if (full && full.length > THREE_LINE_MAX) {
+      const truncated = full.slice(0, THREE_LINE_MAX);
+      const lastStop = truncated.search(/[.!?][^.!?]*$/);
+      if (lastStop > TWO_LINE_MIN) {
+        return truncated.slice(0, lastStop + 1).trim();
+      }
+      // No clean sentence boundary — hard truncate with ellipsis
+      return truncated.slice(0, THREE_LINE_MAX - 1).trimEnd() + "…";
+    }
+
+    // Fall back to narrative_short if full is missing
+    if (short && short.length >= 12 && short.length <= THREE_LINE_MAX) {
+      return short;
+    }
+
+    // Last resort: id-derived title
+    if (idFallback && idFallback.length >= 4) return idFallback;
+
+    return "";
   };
 
   // ── PACK ROWS ───────────────────────────────────────────────────────
@@ -2034,8 +2136,8 @@ function VitalsInlineRow({ vitals }) {
                 style={{ color, display: "inline-flex", alignItems: "center", justifyContent: "center" }}
               >
                 {icon}
-              </span>
-              {v.name}
+                </span>
+                <span className="dashv2-vital-hchip-name">{v.name}</span>
             </div>
 
             <div className="dashv2-vital-hchip-val">
@@ -2053,16 +2155,84 @@ function VitalsInlineRow({ vitals }) {
   );
 }
 
+/* ───────────────────────────────────────────────────────────────────
+   CORE VITAL-SIGN MATCHER (single-purpose dashboard only)
+   Used to guarantee that flagged vital signs (BP, HR, SpO2, Temp, RR)
+   are never silently dropped from the vitals views in favor of
+   lab-panel values with a larger raw deviation score. Lab panels
+   (Vitamin D, TSH, MCH, etc.) are numerous and often carry large
+   deviation magnitudes, so a pure "biggest deviation wins" sort can
+   push out a flagged BP/HR/SpO2 reading even though vital signs are
+   typically what a clinician looks at first.
+
+   This does NOT change selectPriorityVitals() itself — it's a
+   wrapper (selectPriorityVitalsWithVitalSignBoost(), defined below)
+   used consistently by all three vitals views: VitalsOverviewRow
+   (single-report), SidebarVitals (multi-report), and ComparisonTable.
+   ─────────────────────────────────────────────────────────────────── */
+
+const CORE_VITAL_SIGN_PATTERNS = [
+  /heart\s*rate|^hr$|pulse/i,
+  /blood\s*pressure|systolic|diastolic|^bp$/i,
+  /spo2|spo₂|oxygen\s*sat/i,
+  /temperature|^temp/i,
+  /respiratory\s*rate|^rr$/i,
+];
+
+function isCoreVitalSign(name) {
+  const n = String(name || "");
+  return CORE_VITAL_SIGN_PATTERNS.some((rx) => rx.test(n));
+}
+
+/* ───────────────────────────────────────────────────────────────────
+   VITAL-SIGN-PRIORITY SELECTOR (shared helper)
+   Wraps selectPriorityVitals() with a promotion pass: any flagged
+   (risk_score >= 1) core vital sign (BP, HR, SpO2, Temp, RR) is
+   guaranteed a slot ahead of lab-panel values, regardless of raw
+   deviation-score magnitude. Used by BOTH the single-report
+   (VitalsOverviewRow) and multi-report (SidebarVitals) dashboards so
+   a flagged BP/HR/etc. can't be dropped from either view just
+   because a lab value happened to have a larger deviation score.
+
+   Applied to VitalsOverviewRow (single-report) and SidebarVitals
+   (multi-report). Does NOT affect ComparisonTable, which has its own
+   row-matching constraints (needs a value present in both current and
+   previous reports) and a different, smaller slot budget where an
+   unmatched-in-previous vital sign would break the comparison.
+   ─────────────────────────────────────────────────────────────────── */
+
+function selectPriorityVitalsWithVitalSignBoost(currentMeasurements, previousMeasurements, slotCount) {
+  // Pull a wider pool than needed so a flagged vital sign that lost
+  // the pure deviation-score ranking still has a chance to be found
+  // and promoted below, instead of only ever seeing the top N.
+  const poolSize = Array.isArray(currentMeasurements) ? currentMeasurements.length : slotCount;
+  const pool = selectPriorityVitals(currentMeasurements, previousMeasurements, poolSize || slotCount);
+
+  const flaggedVitalSigns = pool.filter(
+    (m) => isCoreVitalSign(m.name || m.vital) && Number.isFinite(m.risk_score) && m.risk_score >= 1
+  );
+  const remaining = pool.filter((m) => !flaggedVitalSigns.includes(m));
+  const selected = [...flaggedVitalSigns, ...remaining].slice(0, slotCount);
+  const overflowCount = Math.max(0, pool.length - selected.length);
+
+  return { selected, overflowCount };
+}
+
 /* ═══════════════════════════════════════════════════════════════════
-   VITALS OVERVIEW ROW (SINGLE-PURPOSE dashboard, 5 vitals)
-   Uses shared selectPriorityVitals() with NO previous filter.
-   Flat list — no category headings.
+   VITALS OVERVIEW ROW (SINGLE-PURPOSE dashboard, 6 vitals)
+   Uses selectPriorityVitalsWithVitalSignBoost() with NO previous
+   filter. Flat list — no category headings.
    ═══════════════════════════════════════════════════════════════════ */
 
 function VitalsOverviewRow({ currentReport, vitalObs, quickSignals }) {
-  // Single-purpose: pick top 6 by priority, no previous filter
+  const SLOT_COUNT = 6;
   const currentMeasurements = currentReport?.measurements || [];
-  const selected = selectPriorityVitals(currentMeasurements, null, 6);
+
+  const { selected, overflowCount } = selectPriorityVitalsWithVitalSignBoost(
+    currentMeasurements,
+    null,
+    SLOT_COUNT
+  );
 
   // Convert to the display format the chip row expects
   const actual = selected.map((m) => {
@@ -2091,7 +2261,7 @@ function VitalsOverviewRow({ currentReport, vitalObs, quickSignals }) {
   ];
   const placeholders = placeholderNames
     .filter((name) => !existingNames.has(name))
-    .slice(0, Math.max(0, 6 - actual.length))
+    .slice(0, Math.max(0, SLOT_COUNT - actual.length))
     .map((name) => ({
       name,
       current: "—",
@@ -2100,7 +2270,10 @@ function VitalsOverviewRow({ currentReport, vitalObs, quickSignals }) {
       status: "not_reported",
       category: "reported",
     }));
-  const all = [...actual, ...placeholders].slice(0, 6);
+  const all =
+  actual.length > 0
+    ? [...actual, ...placeholders].slice(0, SLOT_COUNT)
+    : [];
 
   return (
     <div className="dashv2-card dashv2-vitals-row-card">
@@ -2237,17 +2410,24 @@ function QuickSignalsCard({ L, trend, variant }) {
 
 /* ═══════════════════════════════════════════════════════════════════
    SIDEBAR VITALS (2+ reports)
-   Uses shared selectPriorityVitals() with 7 slots.
-   Fill order: Critical → Observational → Normal (variable per category).
-   All three categories are always in play; normal fills whatever slots
-   remain after critical + observational.
+   Uses selectPriorityVitalsWithVitalSignBoost() with 8 slots — same
+   vital-sign promotion as VitalsOverviewRow, so a flagged BP/HR/SpO2/
+   Temp/RR reading can't be pushed out by a lab value with a larger
+   raw deviation score in this view either.
+   Fill order within the boosted pool: Critical → Observational →
+   Normal (variable per category), with flagged vital signs promoted
+   ahead of that ranking.
    ═══════════════════════════════════════════════════════════════════ */
 
 function SidebarVitals({ vitalObs, currentReport, previousReport, nav }) {
   // Sidebar uses 8 slots (has room for one more than the comparison table)
   const currentMeasurements = currentReport?.measurements || [];
   const previousMeasurements = previousReport?.measurements || null;
-  const selected = selectPriorityVitals(currentMeasurements, previousMeasurements, 8);
+  const { selected, overflowCount } = selectPriorityVitalsWithVitalSignBoost(
+    currentMeasurements,
+    previousMeasurements,
+    8
+  );
 
   // Group the selected 7 by category for display
   const crit = [];
@@ -2353,6 +2533,11 @@ function SidebarVitals({ vitalObs, currentReport, previousReport, nav }) {
 /* ═══════════════════════════════════════════════════════════════════
    COMPARISON TABLE  (LAYOUT FIXED — 6 vitals max)
    Row layout: Overall Severity + up to 6 priority vitals = 7 rows max.
+   Uses selectPriorityVitalsWithVitalSignBoost() — same vital-sign
+   promotion as VitalsOverviewRow and SidebarVitals — so a flagged
+   BP/HR/SpO2/Temp/RR reading present in both compared reports can't
+   be dropped in favor of a lab value with a larger raw deviation
+   score.
 
    Header direction convention — left column always = chronologically
    earlier, right column always = chronologically later. Header labels
@@ -2362,10 +2547,22 @@ function SidebarVitals({ vitalObs, currentReport, previousReport, nav }) {
    ═══════════════════════════════════════════════════════════════════ */
 
 function buildMeasurementComparisonRows(currentReport, previousReport) {
-  // Comparison table is layout-locked → only 6 vitals allowed
+  // Comparison table is layout-locked → only 6 vitals allowed.
+  // Uses the same vital-sign-boost helper as VitalsOverviewRow and
+  // SidebarVitals: any flagged (risk_score >= 1) core vital sign
+  // (BP, HR, SpO2, Temp, RR) is guaranteed a slot ahead of lab-panel
+  // values, so a flagged BP can't be dropped from the comparison just
+  // because a lab value had a larger raw deviation score. Safe to
+  // reorder here because selectPriorityVitals() has already filtered
+  // the pool down to vitals present in BOTH reports — the boost only
+  // reorders within that valid pool, it never adds anything unmatched.
   const currentMeasurements = currentReport?.measurements || [];
   const previousMeasurements = previousReport?.measurements || [];
-  const selected = selectPriorityVitals(currentMeasurements, previousMeasurements, 6);
+  const { selected, overflowCount } = selectPriorityVitalsWithVitalSignBoost(
+    currentMeasurements,
+    previousMeasurements,
+    6
+  );
 
   const previousByKey = new Map(previousMeasurements.map((m) => [m.key, m]));
   const rows = [];
@@ -2405,7 +2602,7 @@ function buildMeasurementComparisonRows(currentReport, previousReport) {
     });
   }
 
-  return rows;
+  return { rows, overflowCount };
 }
 
 function ComparisonTable({ L, P, isLatestSelected }) {
@@ -2431,7 +2628,8 @@ function ComparisonTable({ L, P, isLatestSelected }) {
   // Pass right-report as "current" (later in time) and left-report as
   // "previous" (earlier in time). Keeps status comparisons chronologically
   // consistent regardless of which report the user has selected.
-  rows.push(...buildMeasurementComparisonRows(rightReport, leftReport));
+  const { rows: vitalRows, overflowCount } = buildMeasurementComparisonRows(rightReport, leftReport);
+  rows.push(...vitalRows);
 
   // Cap at 7 total rows (1 Overall Severity + 6 priority vitals) — LOCKED
   const cappedRows = rows.slice(0, 7);
@@ -2678,7 +2876,7 @@ function Chat({ dash, report, isOpen, onClose }) {
         {msgs.map((m, i) => (
           <div key={i} className={`dashv2-chat-panel-msg dashv2-chat-panel-msg-${m.role}`}>
             <div className="dashv2-chat-panel-bubble">
-              {m.content}
+              {renderChatMarkdown(m.content)}
               {m.severityDelta && m.severityDelta !== "unchanged" && (
                 <span className={`dashv2-chat-panel-sev-tag dashv2-chat-panel-sev-${m.severityDelta}`}>
                   Severity: {m.severityDelta}

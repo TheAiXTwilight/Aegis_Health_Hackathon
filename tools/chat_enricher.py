@@ -31,6 +31,15 @@ The model never sees:
   - Conversation history (no drift)
   - Raw JSON (no opportunity to invent from noise)
   - User input alone (always anchored to the intel block)
+
+Fixes vs. earlier version:
+  - _ENRICHABLE_INTENTS now includes LIFESTYLE, TREND, RECHECK,
+    SPECIALIST, RANGES. These are legitimately cross-domain questions
+    that can benefit from a connecting sentence tying the general
+    guidance to a specific report finding (e.g. lifestyle chip getting
+    "This is especially relevant given your elevated HbA1c" appended).
+    The 13 anti-hallucination gates still fully apply, so if the model
+    can't ground a useful sentence it silently returns the base answer.
 """
 from __future__ import annotations
 
@@ -44,6 +53,14 @@ from tools.report_analyst import ReportIntelligence
 # Intents that involve cross-domain reasoning — these are the ONLY ones
 # worth enriching. Single-domain questions (what is my TSH?) are fully
 # answered by the deterministic handler.
+#
+# The lifestyle/trend/recheck/specialist/ranges intents are included
+# because their deterministic answers are grounded in report findings
+# but written as generic guidance — a one-sentence enrichment can tie
+# that guidance back to a specific abnormal lab or symptom for extra
+# relevance. All 13 anti-hallucination gates still apply, so if the
+# model can't ground a useful sentence the base answer is returned
+# unchanged.
 _ENRICHABLE_INTENTS = {
     "SEVERITY_REASON",
     "CONDITION_STATUS",
@@ -52,6 +69,11 @@ _ENRICHABLE_INTENTS = {
     "RESPIRATORY",
     "NEURO",
     "SYMPTOM_GENERAL",
+    "LIFESTYLE",
+    "TREND",
+    "RECHECK",
+    "SPECIALIST",
+    "RANGES",
 }
 
 _ENRICHMENT_PROMPT = """\

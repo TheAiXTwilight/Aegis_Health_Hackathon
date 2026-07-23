@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearchParams, useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   deleteJob,
@@ -193,12 +193,29 @@ function getStepStatus(toolsRun, toolsFailed, currentTool, toolKeys, optionalFai
   const anyAttempted = toolKeys.some((t) => toolsRun.includes(t) || toolsFailed.includes(t) || currentTool === t);
   const failedRequiredTools = toolKeys.filter((t) => toolsFailed.includes(t) && !optionalFailedTools.includes(t));
   const anyFailedRequired = failedRequiredTools.length > 0;
-  const allRequiredDone = toolKeys.filter((t) => !optionalFailedTools.includes(t)).every((t) => toolsRun.includes(t));
   const anyOptionalFailed = toolKeys.some((t) => toolsFailed.includes(t) && optionalFailedTools.includes(t));
+
+  // A tool the planner chose not to run at all (e.g. DrugInteractionChecker
+  // excluded from the plan) is neither "run" nor "failed" — it's simply
+  // absent from both lists. Once the job has finished, such a tool should
+  // not keep its step stuck on "pending" forever: only tools that were
+  // actually run need to be counted as done. Blocking on a tool that was
+  // never going to run made completed jobs show earlier steps as
+  // perpetually "Pending" even though nothing was actually still in
+  // progress (see Live Pipeline "Evidence & Drug Check" bug).
+  const jobFinished = jobStatus === "completed" || jobStatus === "failed";
+  const relevantTools = jobFinished
+    ? toolKeys.filter((t) => toolsRun.includes(t) || toolsFailed.includes(t))
+    : toolKeys.filter((t) => !optionalFailedTools.includes(t));
+  const allRequiredDone = jobFinished
+    ? relevantTools.every((t) => toolsRun.includes(t)) && !anyFailedRequired
+    : relevantTools.every((t) => toolsRun.includes(t));
+
   if (anyRunning) return "active";
   if (anyFailedRequired) return "failed";
   if (allRequiredDone || anyOptionalFailed) return "done";
-  if ((jobStatus === "completed" || jobStatus === "failed") && !anyAttempted) return "skipped";
+  if (jobFinished && !anyAttempted) return "skipped";
+  if (jobFinished) return "done"; // job is over; nothing left to wait for
   return "pending";
 }
 
@@ -282,12 +299,41 @@ export default function ReportPage() {
   }, []);
 
   const toggleMenu = (index, event) => {
-    if (openMenuIndex === index) { setOpenMenuIndex(null); setMenuCoords(null); }
-    else {
-      const rect = (event?.currentTarget || event?.target)?.getBoundingClientRect();
-      setOpenMenuIndex(index);
-      if (rect) setMenuCoords({ top: rect.top - 85, left: rect.left + 15 });
+    if (openMenuIndex === index) {
+      setOpenMenuIndex(null);
+      setMenuCoords(null);
+      return;
     }
+    const btn = event?.currentTarget || event?.target;
+    const rect = btn?.getBoundingClientRect();
+    setOpenMenuIndex(index);
+    if (!rect) return;
+
+    // Dropdown geometry constants (must stay in sync with .dropdown-menu CSS):
+    //   padding: 6px, gap between items: 4px, item height ≈ 40px
+    //   → first item's vertical center sits ~26px below popover top.
+    const FIRST_ITEM_CENTER_OFFSET = 26;
+    const MENU_WIDTH_ESTIMATE = 190;
+    const MENU_HEIGHT_ESTIMATE = 4 * 40 + 3 * 4 + 12; // 4 items + 3 gaps + padding
+
+    const dotsCenterY = rect.top + rect.height / 2;
+    let top = dotsCenterY - FIRST_ITEM_CENTER_OFFSET;
+    let left = rect.right + 8; // open to the right of the dots
+
+    // Clamp to viewport so the menu never gets clipped
+    const viewportH = window.innerHeight;
+    const viewportW = window.innerWidth;
+    if (top + MENU_HEIGHT_ESTIMATE > viewportH - 8) {
+      top = Math.max(8, viewportH - MENU_HEIGHT_ESTIMATE - 8);
+    }
+    if (top < 8) top = 8;
+    if (left + MENU_WIDTH_ESTIMATE > viewportW - 8) {
+      // No room on the right — flip to the left of the dots
+      left = rect.left - MENU_WIDTH_ESTIMATE - 8;
+    }
+    if (left < 8) left = 8;
+
+    setMenuCoords({ top, left });
   };
 
   const startStreaming = useCallback(async () => {
@@ -436,19 +482,85 @@ export default function ReportPage() {
   const toggleVoiceReadout = () => {
     const textToSpeak = activeReportText || reportText;
     if (!textToSpeak) return;
-    if ("speechSynthesis" in window) {
-      if (isReadingOut || window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); setIsReadingOut(false); }
-      else {
-        window.speechSynthesis.cancel();
-        const cleanText = textToSpeak.replace(/#{1,6}\s?/g, "").replace(/\*\*/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/[-*•]/g, "");
-        const utterance = new SpeechSynthesisUtterance(cleanText);
+    if (!("speechSynthesis" in window)) {
+      alert("Text-to-speech is not supported in your browser.");
+      return;
+    }
+
+    if (isReadingOut || window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      window.speechSynthesis.cancel();
+      setIsReadingOut(false);
+      return;
+    }
+
+    const speakNow = () => {
+      window.speechSynthesis.cancel();
+      const cleanText = textToSpeak
+        .replace(/#{1,6}\s?/g, "")
+        .replace(/\*\*/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/[-*•]/g, "");
+
+      // A full clinical report is easily 3000-8000+ characters.
+      // SpeechSynthesisUtterance silently fails or stalls on very long
+      // single utterances in Chrome (a long-standing browser bug —
+      // speech stops after ~15s and never resumes/fires onend). Split
+      // into sentence-sized chunks and queue them so long reports are
+      // read out reliably start to finish.
+      const chunks = cleanText
+        .split(/(?<=[.!?])\s+/)
+        .reduce((acc, sentence) => {
+          const last = acc[acc.length - 1];
+          if (last && (last + " " + sentence).length < 200) {
+            acc[acc.length - 1] = last + " " + sentence;
+          } else {
+            acc.push(sentence);
+          }
+          return acc;
+        }, [])
+        .filter((chunk) => chunk.trim().length > 0);
+
+      if (chunks.length === 0) return;
+
+      let index = 0;
+      const speakNextChunk = () => {
+        if (index >= chunks.length) {
+          setIsReadingOut(false);
+          return;
+        }
+        const utterance = new SpeechSynthesisUtterance(chunks[index]);
         utterance.rate = 1.0;
-        utterance.onend = () => setIsReadingOut(false);
+        utterance.onend = () => {
+          index += 1;
+          speakNextChunk();
+        };
         utterance.onerror = () => setIsReadingOut(false);
         window.speechSynthesis.speak(utterance);
-        setIsReadingOut(true);
-      }
-    } else { alert("Text-to-speech is not supported in your browser."); }
+      };
+
+      setIsReadingOut(true);
+      speakNextChunk();
+    };
+
+    // On first use in a session, window.speechSynthesis.getVoices() can
+    // return an empty array because voices load asynchronously — calling
+    // .speak() before they're ready causes some browsers (notably
+    // Chrome) to silently no-op. Wait for the voiceschanged event once
+    // if voices aren't ready yet, then speak.
+    if (window.speechSynthesis.getVoices().length === 0) {
+      const onVoicesReady = () => {
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
+        speakNow();
+      };
+      window.speechSynthesis.addEventListener("voiceschanged", onVoicesReady);
+      // Fallback in case voiceschanged never fires on this browser.
+      window.setTimeout(() => {
+        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
+        speakNow();
+      }, 300);
+    } else {
+      speakNow();
+    }
   };
 
   const handleKeyInsights = (item) => {
@@ -522,16 +634,11 @@ export default function ReportPage() {
         </div>
       );
     }
-    return (
-      <div className="form-center-container">
-        <div className="report-dashboard-card">
-          <div className="report-column" style={{ flex: 1, textAlign: "center", padding: "40px" }}>
-            <h2>No Active Analysis</h2>
-            <p style={{ color: "#425894", fontSize: "16px", marginTop: "12px" }}>Please fill out the medical form to start an analysis.</p>
-          </div>
-        </div>
-      </div>
-    );
+    // No reports at all (e.g. just deleted the last one) — /dashboard's
+    // EmptyDashboard already shows the correct "Health Scan / Fill the
+    // Form" state for this exact case. Redirect there instead of
+    // duplicating a second, separate empty-state screen here.
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
@@ -583,7 +690,7 @@ export default function ReportPage() {
           </div>
 
           <div className="report-column history-col" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", borderLeft: "1px solid rgba(255, 255, 255, 0.2)", paddingLeft: "16px" }}>
-            <h2 style={{ fontSize: "19px", marginBottom: "16px" }}>Report History</h2>
+            <h2 className="report-history-heading" style={{ fontSize: "19px", margin: 0, height: "58px", display: "flex", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid rgba(255, 255, 255, 0.2)", marginBottom: "16px", boxSizing: "border-box" }}>Report History</h2>
             <div className="history-container" ref={menuRef} key={`history-${forceDeleteTick}`} style={{ overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "10px", paddingRight: "4px" }}>
               {(reportHistoryList.length > 0 ? reportHistoryList : currentHistoryItem ? [currentHistoryItem] : []).map((item, index) => {
                 const isSelected = selectedHistoryItem ? selectedHistoryItem.jobId === item.jobId : item.jobId === jobId;
@@ -665,7 +772,7 @@ export default function ReportPage() {
         })()}
 
         <div className="report-glass-card report-right-card" style={{ flex: "1 1 0%", width: "50%", height: "100%", padding: "26px 34px", background: "rgba(255, 255, 255, 0.12)", backdropFilter: "blur(24px) saturate(1.5)", WebkitBackdropFilter: "blur(24px) saturate(1.5)", border: "1px solid rgba(255, 255, 255, 0.3)", boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5)", borderRadius: "38px", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-          <div className="right-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: "1px solid rgba(255, 255, 255, 0.2)", marginBottom: "16px", flexShrink: 0 }}>
+          <div className="right-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", height: "58px", boxSizing: "border-box", paddingBottom: "16px", borderBottom: "1px solid rgba(255, 255, 255, 0.2)", marginBottom: "16px", flexShrink: 0 }}>
             <div>
               <h2 style={{ color: "#0d2167", fontSize: "22px", fontWeight: 800, margin: 0 }}>{activeHistoryItem?.name || "Report Overview"}</h2>
               <span style={{ fontSize: "12px", color: "#425894" }}>
@@ -744,11 +851,11 @@ export default function ReportPage() {
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
                   <span style={{ fontSize: "11px", color: "#4b5b8c", fontWeight: 600, marginRight: "4px" }}>Mandatory:</span>
                   {[
-                    { label: "VoiceTranscriber", active: Boolean(activeResultData?.submitted?.audio_uploaded) },
+                    { label: "VoiceTranscriber", active: Boolean(activeResultData?.submitted?.audio_uploaded || statusPayload?.tools_run?.includes("VoiceTranscriber")) },
                     { label: "SymptomExtractor", active: Boolean(activeResultData?.submitted?.symptoms_text || statusPayload?.tools_run?.includes("SymptomExtractor")) },
-                    { label: "LabReportParser", active: Boolean(activeResultData?.submitted?.lab_pdf_uploaded) },
-                    { label: "XRayProcessor", active: Boolean(activeResultData?.submitted?.xray_image_uploaded || (activeResultData?.submitted?.xray_findings && activeResultData.submitted.xray_findings.length > 0)) },
-                    { label: "DrugInteractionChecker", active: Boolean(activeResultData?.submitted?.medications && activeResultData.submitted.medications.length > 0) },
+                    { label: "LabReportParser", active: Boolean(activeResultData?.submitted?.lab_pdf_uploaded || statusPayload?.tools_run?.includes("LabReportParser")) },
+                    { label: "XRayProcessor", active: Boolean(activeResultData?.submitted?.xray_image_uploaded || (activeResultData?.submitted?.xray_findings && activeResultData.submitted.xray_findings.length > 0) || statusPayload?.tools_run?.includes("XRayProcessor")) },
+                    { label: "DrugInteractionChecker", active: Boolean((activeResultData?.submitted?.medications && activeResultData.submitted.medications.length > 0) || statusPayload?.tools_run?.includes("DrugInteractionChecker")) },
                   ].map((tool) => (
                     <span key={tool.label} style={{ background: tool.active ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.1)", color: tool.active ? "#10b981" : "#64748b", border: `1px solid ${tool.active ? "rgba(16, 185, 129, 0.3)" : "rgba(255, 255, 255, 0.15)"}`, padding: "3px 10px", borderRadius: "12px", fontSize: "11px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
                       <span>{tool.active ? "✓" : "✗"}</span> {tool.label}

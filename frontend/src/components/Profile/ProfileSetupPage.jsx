@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import ProfileForm from "../../components/Profile/ProfileForm";
 import "../../components/Profile/Profile.css";
-import "../../components/Profile/ProfileGlassOverride.css";
 
 export default function ProfileSetupPage() {
   const navigate = useNavigate();

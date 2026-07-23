@@ -63,6 +63,79 @@ def is_moderate(severity: str) -> bool:
     return (severity or "").upper() in MODERATE_SEVERITIES
 
 
+# ── Symptom display normalization (single source of truth) ─────────
+# Any caller that shows a symptom name to the user (chat answers,
+# suggested-question chips, report body, etc.) should go through
+# display_symptom()/join_symptoms() rather than rendering
+# intel.symptom_groups.* strings directly. This is what keeps
+# "dizzy, headache is on record" from reappearing in a new call site.
+_SYMPTOM_DISPLAY_MAP = {
+    "dizzy": "dizziness",
+    "faint": "fainting",
+    "tired": "fatigue",
+    "lightheaded": "lightheadedness",
+    "light-headed": "lightheadedness",
+    "breathless": "breathlessness",
+    "short of breath": "shortness of breath",
+    "nauseous": "nausea",
+    "queasy": "nausea",
+    "throwing up": "vomiting",
+    "achy": "aching",
+}
+
+
+def display_symptom(raw: str) -> str:
+    """Map a single raw/colloquial symptom string to its proper noun form.
+
+    Two-tier normalization so ANY raw extraction value renders cleanly,
+    not just the ones in the alias map:
+      1. Known colloquialism/typo → mapped noun form (e.g. "dizzy" → "dizziness").
+      2. Anything else → case-normalized to lowercase (extraction can hand
+         back "SWOLLEN ANKLES", "Swollen Ankles", etc. with no consistent
+         casing; lowercasing here means callers can always safely
+         .capitalize() the first word without fighting raw ALL-CAPS text).
+    Multi-word acronyms the report might contain (e.g. "COPD", "TSH")
+    aren't symptom names, so lowercasing symptom text is safe here even
+    though we deliberately don't do this for lab/biomarker names.
+    """
+    if not raw:
+        return ""
+    stripped = raw.strip()
+    key = stripped.lower()
+    if key in _SYMPTOM_DISPLAY_MAP:
+        return _SYMPTOM_DISPLAY_MAP[key]
+    return key
+
+
+def join_symptoms(symptoms: list[str], limit: int | None = None) -> str:
+    """Comma-join symptoms, each passed through display_symptom()."""
+    items = symptoms[:limit] if limit else symptoms
+    return ", ".join(display_symptom(s) for s in items if s)
+
+
+def _resolve_confidence_pct(ctx: dict) -> int:
+    """Resolve a 0-100 confidence percentage from context, regardless of
+    which key/scale the caller used. Single source of truth for this
+    conversion so no caller can silently produce a 0% confidence by
+    passing 'confidence' (0-1 scale) instead of 'confidence_percent'
+    (0-100 scale), or vice versa.
+    """
+    if "confidence_percent" in ctx and ctx["confidence_percent"] is not None:
+        try:
+            return int(round(float(ctx["confidence_percent"])))
+        except (TypeError, ValueError):
+            return 0
+    if "confidence" in ctx and ctx["confidence"] is not None:
+        try:
+            val = float(ctx["confidence"])
+        except (TypeError, ValueError):
+            return 0
+        # Heuristic: values <= 1 are the 0-1 scale, anything above is
+        # already a percentage (defensive against either convention).
+        return int(round(val * 100)) if val <= 1 else int(round(val))
+    return 0
+
+
 # ── Finding types ─────────────────────────────────────────────────
 
 @dataclass
@@ -414,7 +487,7 @@ class ReportIntelligence:
             job_id=str(ctx.get("job_id") or ""),
             severity=severity,
             severity_rank=severity_rank(severity),
-            confidence_pct=int(ctx.get("confidence_percent") or 0),
+            confidence_pct=_resolve_confidence_pct(ctx),
             validation_status=ctx.get("validation_status"),
             symptom_groups=groups,
             symptom_duration=ctx.get("symptom_duration"),

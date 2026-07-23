@@ -4,8 +4,7 @@ import { getHealth } from "../../services/api";
 import "./SystemIndicator.css";
 
 const FALLBACK_STATS = {
-  ramUsedGb: 0,
-  ramTotalGb: 0,
+  ramUsedMb: 0,
   cpuPercent: null,
   gpuAvailable: false,
   backendOnline: false,
@@ -14,16 +13,22 @@ const FALLBACK_STATS = {
 const clamp = (value) => Math.max(0, Math.min(100, value));
 
 function normalizeHealth(payload) {
-  const usedMb = Number(payload?.memory_used_mb || 0);
-  const totalMb = Number(payload?.memory_total_mb || 0);
-  const cpuValue = payload?.cpu_percent;
+  // Was reading memory_used_mb / memory_total_mb / cpu_percent — those
+  // are SYSTEM-WIDE (whole machine, from /proc/meminfo and /proc/stat).
+  // Switched to app_memory_used_mb / app_cpu_percent, which are scoped
+  // to this backend process only (via /proc/self/*), so the indicator
+  // reflects what AegisHealth itself is using, not the whole device.
+  // Note: app_cpu_percent is a percent of ONE core (matches `top`
+  // convention) and can exceed 100% under multi-threaded load — it is
+  // NOT normalized against total core count like system cpu_percent was.
+  const appUsedMb = Number(payload?.app_memory_used_mb || 0);
+  const cpuValue = payload?.app_cpu_percent;
 
   return {
-    ramUsedGb: usedMb > 0 ? usedMb / 1024 : 0,
-    ramTotalGb: totalMb > 0 ? totalMb / 1024 : 0,
+    ramUsedMb: appUsedMb > 0 ? appUsedMb : 0,
     cpuPercent: cpuValue === null || cpuValue === undefined
       ? null
-      : clamp(Math.round(Number(cpuValue))),
+      : Math.round(Number(cpuValue)),
     gpuAvailable: Boolean(payload?.gpu_available),
     backendOnline: true,
   };
@@ -81,10 +86,17 @@ export default function SystemIndicator({ isProcessing = false }) {
     };
   }, []);
 
-  const ramPercent = stats.ramTotalGb > 0
-    ? clamp(Math.round((stats.ramUsedGb / stats.ramTotalGb) * 100))
-    : 0;
-  const cpuPercent = stats.cpuPercent === null ? 0 : clamp(stats.cpuPercent);
+  // App RAM has no natural "total" the way system RAM does (there's no
+  // single ceiling for "how much RAM could this process use"), so the
+  // bar fill uses a soft reference ceiling just to give the bar visual
+  // motion — the displayed number is always the real MB/GB value.
+  const RAM_BAR_REFERENCE_MB = 1024; // 1 GB — adjust if typical footprint changes
+  const ramPercent = clamp(Math.round((stats.ramUsedMb / RAM_BAR_REFERENCE_MB) * 100));
+  // App CPU is a percent of ONE core and can legitimately exceed 100%
+  // under multi-threaded work — clamp only the bar's visual fill, not
+  // the displayed number.
+  const cpuDisplay = stats.cpuPercent === null ? 0 : Math.max(0, stats.cpuPercent);
+  const cpuBarPercent = clamp(cpuDisplay);
 
   const searchParams = new URLSearchParams(location.search);
   const hasReportJobId = Boolean(searchParams.get("jobId"));
@@ -149,9 +161,11 @@ export default function SystemIndicator({ isProcessing = false }) {
           </div>
 
           <span className="resource-value">
-            {stats.ramTotalGb > 0
-              ? `${stats.ramUsedGb.toFixed(1)} / ${stats.ramTotalGb.toFixed(1)} GB`
-              : "-- / -- GB"}
+            {stats.ramUsedMb > 0
+              ? stats.ramUsedMb >= 1024
+                ? `${(stats.ramUsedMb / 1024).toFixed(1)} GB`
+                : `${Math.round(stats.ramUsedMb)} MB`
+              : "-- MB"}
           </span>
         </div>
 
@@ -163,16 +177,16 @@ export default function SystemIndicator({ isProcessing = false }) {
             role="progressbar"
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-valuenow={cpuPercent}
+            aria-valuenow={cpuBarPercent}
           >
             <div
               className="resource-fill cpu-fill"
-              style={{ width: `${cpuPercent}%` }}
+              style={{ width: `${cpuBarPercent}%` }}
             />
           </div>
 
           <span className="resource-value">
-            {stats.backendOnline && stats.cpuPercent !== null ? `${cpuPercent}%` : "--%"}
+            {stats.backendOnline && stats.cpuPercent !== null ? `${cpuDisplay}%` : "--%"}
           </span>
         </div>
 

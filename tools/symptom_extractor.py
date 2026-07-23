@@ -34,6 +34,27 @@ Prompt policy:
     Attempt 3: minimal prompt — just the schema and the text
     Return ToolError after attempt 3 fails.
 
+Symptom vs. lab-value contract:
+    The `symptoms` list must contain only symptom PHRASES (e.g. "chest
+    tightness", "dizzy", "fever") — never lab measurements or vital
+    readings (e.g. "glucose 245", "bp 140/90", "hba1c 7.2"). Those
+    belong in the LabTool's output, not here.
+
+    Enforcement is two-layer:
+      1. Prompt-level  — all three prompts explicitly list lab values,
+                         vitals, and biomarker readings as NOT symptoms.
+                         Teaches the model but only affects new outputs.
+      2. Validation-level — _strip_lab_values_from_symptoms() runs after
+                         JSON parsing, before Pydantic validation. Kills
+                         any "<biomarker> <number>" pattern that slipped
+                         through the prompt (e.g. LLM misclassification,
+                         or an older model that hasn't seen the updated
+                         prompt yet).
+
+    Reports already persisted in the DB with the old (broken) extraction
+    remain broken — result_json is frozen. Only reports generated after
+    this patch will have clean symptoms.
+
 Exception handling:
     Each attempt catches only expected failure modes:
         json.JSONDecodeError       — LLM emitted non-JSON output
@@ -79,6 +100,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 import httpx
 from loguru import logger
@@ -106,6 +128,11 @@ _MAX_INPUT_CHARS = 4000  # truncate input before prompt injection
 #
 # Using .replace() with %%TEXT%% — never .format() on patient input.
 # Prevents KeyError from curly braces in patient-supplied text.
+#
+# All three prompts now include an explicit "NOT symptoms" section
+# that excludes lab values, vitals, and biomarker readings. This
+# teaches the model that "glucose 245" is data ABOUT the patient,
+# not a symptom the patient reported.
 
 _PROMPT_ATTEMPT_1 = """\
 You are a clinical NLP assistant. Extract structured clinical entities \
@@ -132,6 +159,27 @@ Rules:
 - All list values must be strings
 - duration must be a string, not null
 
+What COUNTS as a symptom:
+- Any descriptive phrase describing how the patient feels or what
+  they are experiencing, taken ONLY from the patient text below.
+- A body part + a sensation word taken from the patient text
+  (e.g. "<body part> pain", "<body part> ache").
+
+What is NOT a symptom (never include these in "symptoms"):
+- Lab values or biomarker readings, e.g. a test/biomarker name
+  followed by a number (such as a glucose, HbA1c, TSH, vitamin,
+  cholesterol, or creatinine reading).
+- Vital signs with numbers, e.g. blood pressure, heart rate,
+  oxygen saturation, or temperature readings.
+- Any "<test or biomarker name> <number>" phrase — that is data,
+  not a symptom. Skip it entirely. It belongs to a different tool.
+
+CRITICAL: Only extract symptoms that are actually written in the
+"Patient symptom text" section below. Do not invent, assume, or add
+any symptom that is not explicitly present in that text. If the
+patient text mentions only one or two symptoms, return only those
+one or two symptoms — never pad the list with other symptoms.
+
 Patient symptom text:
 %%TEXT%%
 
@@ -145,11 +193,21 @@ Text: %%TEXT%%
 Return this exact structure with no extra fields:
 {"symptoms":[],"duration":"","severity_indicators":[],"medical_entities":[],"negations":[]}
 
-Fill each list with items found in the text. Use "" for duration if not mentioned.
+Rules:
+- symptoms are descriptive phrases taken ONLY from the text above —
+  never invent or add symptoms not present in the text
+- do NOT include lab values or vitals in symptoms (a biomarker or
+  vital-sign name followed by a number is NOT a symptom — skip it)
+- fill each list with items found in the text; if the text mentions
+  only one symptom, return only that one symptom
+- use "" for duration if not mentioned
+
 Return JSON only:"""
 
 _PROMPT_ATTEMPT_3 = """\
-JSON only. No explanation.
+JSON only. No explanation. Symptoms are descriptive phrases taken \
+only from the text below, never lab values (a biomarker name plus \
+a number). Do not add symptoms that are not in the text.
 
 %%TEXT%%
 
@@ -168,6 +226,224 @@ _RETRY_EXCEPTIONS = (
     httpx.HTTPStatusError,
     httpx.RequestError,
 )
+
+
+# ── Lab-value filter ──────────────────────────────────────────────
+#
+# Post-parse guard. Even with the updated prompts, an older aegis-llama
+# checkpoint or an off-day sampling can still emit "glucose 245" as a
+# symptom. This regex + filter enforces the contract at the boundary
+# between the LLM and SymptomExtractionResult.
+#
+# Match rule: a candidate is a "lab-value phrase" (NOT a symptom) if
+# it contains one of a whitelist of biomarker/vital names followed by
+# a number, OR if it matches a bare "<any word> <number>[units]" shape
+# where the number is the only content besides units. A candidate is
+# never dropped just because it contains a number — "fever 101" is
+# borderline, but genuine descriptive symptoms rarely include numbers,
+# so bare "<word> <number>" is treated as a measurement.
+#
+# Words that indicate a lab/vital reading rather than a symptom.
+# Keep this list conservative — a false-positive here silently drops
+# a real symptom.
+
+_LAB_KEYWORDS = (
+    # Blood chemistry
+    "glucose", "sugar", "hba1c", "a1c", "cholesterol", "ldl", "hdl",
+    "triglyceride", "creatinine", "urea", "bun", "sodium", "potassium",
+    "calcium", "magnesium", "chloride", "bicarbonate", "albumin",
+    # Endocrine
+    "tsh", "t3", "t4", "insulin", "cortisol",
+    # Hematology
+    "hemoglobin", "haemoglobin", "hgb", "hct", "hematocrit",
+    "wbc", "rbc", "platelet", "platelets",
+    # Cardiac markers
+    "troponin", "ck", "ck-mb", "bnp", "nt-probnp",
+    # Vitamins & minerals
+    "vitamin", "vit", "ferritin", "iron", "b12", "folate",
+    # Vitals
+    "bp", "blood pressure", "systolic", "diastolic",
+    "heart rate", "hr", "pulse", "spo2", "oxygen saturation",
+    "temperature", "temp", "respiratory rate", "rr",
+    # Other
+    "creatine", "bilirubin", "alt", "ast", "alp", "ggt",
+)
+
+# A bare-measurement candidate is anything of shape
+# "<word> <optional-punctuation> <number>[optional-unit]" with nothing
+# else meaningful. Used as a secondary check when a lab keyword doesn't
+# match but the phrase is clearly a measurement.
+#
+# Example matches: "glucose 245", "bp 140/90", "tsh: 6.05", "hba1c=7.2"
+# Example non-matches: "chest pain", "dizzy for 2 days" (has other words),
+#                       "3 days" (no leading word)
+
+_BARE_MEASUREMENT_RE = re.compile(
+    r"""
+    ^\s*
+    [a-z][a-z0-9\-\s]{0,25}?    # leading name (letters, digits, dashes, spaces)
+    \s*[:=]?\s*                  # optional : or =
+    \d+(?:\.\d+)?                # number
+    (?:\s*/\s*\d+(?:\.\d+)?)?    # optional /number (e.g. 140/90)
+    \s*
+    [a-zA-Zµ%/]{0,10}            # optional unit (mg/dL, %, mmol/L, µg, etc.)
+    \s*$
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+
+
+def _looks_like_lab_value(phrase: str) -> bool:
+    """
+    True if a candidate symptom phrase actually describes a lab value,
+    vital sign, or biomarker reading rather than a symptom.
+
+    Two-part check:
+      1. Contains a known lab/vital keyword AND at least one digit.
+         This catches "glucose 245", "TSH 6.05", "vitamin d 12".
+      2. Matches the bare "<word> <number>[unit]" shape with nothing
+         extra. Catches things not in the keyword list, like a rare
+         biomarker "urate 8.5" the whitelist doesn't cover.
+
+    Conservative on purpose — genuine descriptive symptoms like
+    "chest pain", "shortness of breath", or "severe headache" cannot
+    match either rule because they contain no digit AND don't fit the
+    bare-measurement shape.
+    """
+    if not phrase:
+        return False
+
+    lowered = phrase.lower().strip()
+
+    # Rule 1: known lab/vital keyword + a digit
+    has_digit = any(ch.isdigit() for ch in lowered)
+    if has_digit:
+        for kw in _LAB_KEYWORDS:
+            # Word-boundary match so "hr" doesn't match inside "hurt"
+            if re.search(r"\b" + re.escape(kw) + r"\b", lowered):
+                return True
+
+    # Rule 2: bare "<word> <number>[unit]" shape
+    if _BARE_MEASUREMENT_RE.match(lowered):
+        return True
+
+    return False
+
+
+def _strip_lab_values_from_symptoms(symptoms: list) -> list:
+    """
+    Return the symptoms list with lab-value phrases removed. Logs a
+    warning for each dropped phrase so misclassifications are visible
+    in production logs.
+
+    Accepts a list (already coerced by _coerce_field). Non-string
+    items are dropped silently — Pydantic would have rejected them
+    anyway.
+    """
+    cleaned: list[str] = []
+    dropped: list[str] = []
+    for item in symptoms:
+        if not isinstance(item, str):
+            continue
+        if _looks_like_lab_value(item):
+            dropped.append(item)
+            continue
+        cleaned.append(item)
+
+    if dropped:
+        logger.warning(
+            "symptom_extractor · dropped lab-value phrases from symptoms",
+            dropped=dropped,
+        )
+
+    return cleaned
+
+
+def _normalize_words(text: str) -> set[str]:
+    """Lowercase word set for lexical overlap checks (ignores punctuation)."""
+    return set(re.findall(r"[a-z]+", text.lower()))
+
+
+def _filter_ungrounded_symptoms(symptoms: list, source_text: str) -> list:
+    """
+    Drop symptom phrases that share no words with the actual patient
+    input. Guards against the LLM parroting few-shot example phrases
+    (or otherwise inventing symptoms) instead of extracting from the
+    real text. Logs a warning for each dropped phrase.
+
+    A phrase is kept if at least one of its content words (length > 2,
+    to skip stray "a"/"is"/etc.) appears in the source text. This is
+    intentionally permissive — it only needs to catch wholesale
+    fabrication, not lightly-paraphrased extraction.
+    """
+    source_words = _normalize_words(source_text)
+    if not source_words:
+        return symptoms
+
+    kept: list[str] = []
+    dropped: list[str] = []
+    for item in symptoms:
+        if not isinstance(item, str):
+            continue
+        phrase_words = {w for w in _normalize_words(item) if len(w) > 2}
+        if not phrase_words or phrase_words & source_words:
+            kept.append(item)
+        else:
+            dropped.append(item)
+
+    if dropped:
+        logger.warning(
+            "symptom_extractor · dropped ungrounded symptom phrases "
+            "(not present in source text)",
+            dropped=dropped,
+        )
+
+    return kept
+
+
+def _dedupe_overlapping_symptoms(symptoms: list) -> list:
+    """
+    Collapse near-duplicate symptom phrases the model sometimes emits for
+    a single real symptom — e.g. "chest pain" and "chest pain ache" both
+    extracted from one "I have chest pain" input. Both phrases are
+    individually grounded (share words with the source text), so
+    _filter_ungrounded_symptoms correctly keeps both; this is a
+    different problem — overlap between the *extracted* phrases
+    themselves, not fabrication.
+
+    If one phrase's word set is a subset of another's, keep only the
+    longer (more specific) phrase. This is intentionally conservative:
+    it only collapses true subset/superset pairs, not merely related
+    phrases, so e.g. "chest pain" and "shortness of breath" (both real,
+    distinct symptoms) are never merged.
+    """
+    if len(symptoms) < 2:
+        return symptoms
+
+    parsed = [
+        (item, {w for w in _normalize_words(item) if len(w) > 2})
+        for item in symptoms
+        if isinstance(item, str)
+    ]
+
+    drop_indices: set[int] = set()
+    for i, (text_i, words_i) in enumerate(parsed):
+        if i in drop_indices or not words_i:
+            continue
+        for j, (text_j, words_j) in enumerate(parsed):
+            if i == j or j in drop_indices or not words_j:
+                continue
+            if words_i < words_j:
+                # i is a strict subset of j — i is redundant, drop it.
+                drop_indices.add(i)
+                break
+            if words_i == words_j and j > i:
+                # Identical word sets (e.g. differ only in stray
+                # punctuation/casing already normalized away) — keep
+                # the first occurrence, drop the later duplicate.
+                drop_indices.add(j)
+
+    return [item for idx, (item, _) in enumerate(parsed) if idx not in drop_indices]
 
 
 # ── Ollama call ───────────────────────────────────────────────────
@@ -280,16 +556,21 @@ def _coerce_field(value: object, field: str) -> object:
     return value
 
 
-def _parse_response(raw: str) -> SymptomExtractionResult:
+def _parse_response(raw: str, source_text: str = "") -> SymptomExtractionResult:
     """
     Parse LLM JSON response into SymptomExtractionResult.
 
     Steps:
         1. Strip markdown code fences (same pattern as execution_planner)
-        2. Extract JSON object via regex (safe: avoids spurious braces)
+        2. Extract JSON object via brace-counting parser
         3. json.loads → dict
         4. Per-field coercion (None, scalar → correct Python type)
-        5. SymptomExtractionResult(**data) — Pydantic validates
+        5. Filter lab-value phrases out of `symptoms` (guardrail
+           against LLM misclassifying "glucose 245" as a symptom)
+        6. Filter out symptoms with no lexical grounding in the actual
+           patient text (guardrail against the LLM parroting prompt
+           few-shot examples instead of extracting from the real input)
+        7. SymptomExtractionResult(**data) — Pydantic validates
 
     Raises json.JSONDecodeError or pydantic.ValidationError on failure.
     Caller (SymptomExtractor.run) catches these as _RETRY_EXCEPTIONS.
@@ -313,6 +594,24 @@ def _parse_response(raw: str) -> SymptomExtractionResult:
     data["severity_indicators"]  = _coerce_field(data.get("severity_indicators"),  "severity_indicators")
     data["medical_entities"]     = _coerce_field(data.get("medical_entities"),     "medical_entities")
     data["negations"]            = _coerce_field(data.get("negations"),            "negations")
+
+    # Contract enforcement: drop lab-value phrases that the LLM
+    # misclassified as symptoms. Only touches `symptoms` — lab
+    # readings never belonged there and this is where they get
+    # filtered out before persistence.
+    data["symptoms"] = _strip_lab_values_from_symptoms(data["symptoms"])
+
+    # Contract enforcement: drop symptom phrases the model invented
+    # rather than extracted (e.g. echoed prompt examples). Only runs
+    # when we have source text to check against.
+    if source_text:
+        data["symptoms"] = _filter_ungrounded_symptoms(data["symptoms"], source_text)
+
+    # Contract enforcement: collapse near-duplicate/overlapping symptom
+    # phrases (e.g. "chest pain" + "chest pain ache" from one real
+    # symptom) so downstream text like Section 10's recommendation line
+    # never reads "chest pain and chest pain ache".
+    data["symptoms"] = _dedupe_overlapping_symptoms(data["symptoms"])
 
     return SymptomExtractionResult(**data)
 
@@ -376,7 +675,7 @@ class SymptomExtractor:
 
                 try:
                     raw    = await _call_ollama(prompt)
-                    result = _parse_response(raw)
+                    result = _parse_response(raw, source_text=text)
 
                     logger.info(
                         "symptom_extractor · attempt succeeded",
