@@ -1,0 +1,159 @@
+[
+  {
+    "_comment": "Threshold values in lab_measurements are derived from tools/lab_thresholds.py. If production thresholds change, update these fixtures to match. Phase 3 migration: generate cases programmatically from threshold constants once the real lab parser stabilises.",
+    "name": "default_low_mild_headache",
+    "description": "Mild headache, no risk indicators — DEFAULT_LOW fallback",
+    "symptoms": "Mild headache since yesterday.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [],
+    "expected_level": "LOW",
+    "expected_rule": "RULE_DEFAULT_LOW"
+  },
+  {
+    "name": "chest_pain_sob_high",
+    "description": "Chest pain with shortness of breath — RULE_CHEST_PAIN_AND_SOB",
+    "symptoms": "Chest pain and shortness of breath for 2 days.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [],
+    "expected_level": "HIGH",
+    "expected_rule": "RULE_CHEST_PAIN_AND_SOB"
+  },
+  {
+    "name": "critical_troponin_high",
+    "description": "Troponin above critical threshold (CRITICAL_TROPONIN_NG_ML=0.04) — RULE_CRITICAL_LAB_TROPONIN",
+    "symptoms": "Chest discomfort.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {"troponin": 0.06},
+    "lab_abnormal": ["Elevated troponin: 0.06 ng/mL (threshold > 0.04)"],
+    "drug_interactions": [],
+    "expected_level": "HIGH",
+    "expected_rule": "RULE_CRITICAL_LAB_TROPONIN"
+  },
+  {
+    "name": "critical_haemoglobin_high",
+    "description": "Haemoglobin below critical threshold (CRITICAL_HAEMOGLOBIN_G_DL=7.0) — RULE_CRITICAL_LAB_HAEMOGLOBIN",
+    "symptoms": "Fatigue and dizziness.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {"haemoglobin": 6.5},
+    "lab_abnormal": ["Low haemoglobin: 6.5 g/dL (threshold < 7.0)"],
+    "drug_interactions": [],
+    "expected_level": "HIGH",
+    "expected_rule": "RULE_CRITICAL_LAB_HAEMOGLOBIN"
+  },
+  {
+    "name": "critical_potassium_high",
+    "description": "Potassium above critical threshold (CRITICAL_POTASSIUM_MMOL_L=6.5) — RULE_CRITICAL_LAB_POTASSIUM",
+    "symptoms": "Weakness and palpitations.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {"potassium": 6.8},
+    "lab_abnormal": ["High potassium: 6.8 mmol/L (threshold > 6.5)"],
+    "drug_interactions": [],
+    "expected_level": "HIGH",
+    "expected_rule": "RULE_CRITICAL_LAB_POTASSIUM"
+  },
+  {
+    "name": "severe_drug_interaction_high",
+    "description": "Severe drug interaction — RULE_SEVERE_DRUG_INTERACTION",
+    "symptoms": "Routine medication review.",
+    "medications": ["warfarin", "aspirin"],
+    "xray_findings": [],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [
+      {
+        "drugs": ["warfarin", "aspirin"],
+        "severity": "severe",
+        "description": "Warfarin + Aspirin significantly increases bleeding risk."
+      }
+    ],
+    "expected_level": "HIGH",
+    "expected_rule": "RULE_SEVERE_DRUG_INTERACTION"
+  },
+  {
+    "name": "moderate_drug_interaction_medium",
+    "description": "Moderate drug interaction, no HIGH rule — RULE_MODERATE_DRUG_INTERACTION",
+    "symptoms": "Routine medication review.",
+    "medications": ["aspirin", "ibuprofen"],
+    "xray_findings": [],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [
+      {
+        "drugs": ["aspirin", "ibuprofen"],
+        "severity": "moderate",
+        "description": "Concurrent NSAID use increases gastrointestinal bleeding risk."
+      }
+    ],
+    "expected_level": "MEDIUM",
+    "expected_rule": "RULE_MODERATE_DRUG_INTERACTION"
+  },
+  {
+    "name": "abnormal_lab_medium",
+    "description": "Abnormal potassium, below critical threshold (ABNORMAL_HIGH_POTASSIUM_MMOL_L=5.5) — RULE_ABNORMAL_LAB_ANY",
+    "symptoms": "Fatigue.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {"potassium": 5.8},
+    "lab_abnormal": ["High potassium: 5.8 mmol/L (threshold > 5.5)"],
+    "drug_interactions": [],
+    "expected_level": "MEDIUM",
+    "expected_rule": "RULE_ABNORMAL_LAB_ANY"
+  },
+  {
+    "name": "xray_cardiomegaly_medium",
+    "description": "Cardiomegaly on X-ray — RULE_XRAY_CARDIOMEGALY",
+    "symptoms": "Mild breathlessness.",
+    "medications": [],
+    "xray_findings": ["Cardiomegaly"],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [],
+    "expected_level": "MEDIUM",
+    "expected_rule": "RULE_XRAY_CARDIOMEGALY"
+  },
+  {
+    "name": "prolonged_symptoms_medium",
+    "description": "Duration contains week, no HIGH rule — RULE_PROLONGED_SYMPTOMS",
+    "symptoms": "Fatigue for 3 weeks.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [],
+    "expected_level": "MEDIUM",
+    "expected_rule": "RULE_PROLONGED_SYMPTOMS"
+  },
+  {
+    "name": "xray_pneumothorax_high",
+    "description": "Pneumothorax on X-ray — RULE_XRAY_PNEUMOTHORAX",
+    "symptoms": "Sudden onset chest pain.",
+    "medications": [],
+    "xray_findings": ["Pneumothorax"],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [],
+    "expected_level": "HIGH",
+    "expected_rule": "RULE_XRAY_PNEUMOTHORAX"
+  },
+  {
+    "name": "zero_medications_low",
+    "description": "No medications, minimal symptoms — DEFAULT_LOW",
+    "symptoms": "Mild sore throat for 2 days.",
+    "medications": [],
+    "xray_findings": [],
+    "lab_measurements": {},
+    "lab_abnormal": [],
+    "drug_interactions": [],
+    "expected_level": "LOW",
+    "expected_rule": "RULE_DEFAULT_LOW"
+  }
+]

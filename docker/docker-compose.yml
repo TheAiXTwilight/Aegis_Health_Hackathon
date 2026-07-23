@@ -1,7 +1,14 @@
+version: '3.8'
+
 services:
   ollama:
-    image: ollama/ollama@sha256:<pinned-digest>
-    runtime: nvidia
+    image: ollama/ollama:latest
+    container_name: aegis_ollama
+    # runtime: nvidia # Uncomment if using GPU (Jetson/NVIDIA)
+    volumes:
+      - ollama_storage:/root/.ollama
+    ports:
+      - "11434:11434"
     environment:
       - OLLAMA_NUM_PARALLEL=1
       - OLLAMA_MAX_LOADED_MODELS=1
@@ -11,18 +18,23 @@ services:
       interval: 5s
       timeout: 10s
       retries: 6
-      start_period: 15s
 
-  app:
+  backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+    container_name: aegis_backend
     depends_on:
       ollama:
         condition: service_healthy
     ports:
       - "8000:8000"
-      - "8501:8501"
-    runtime: nvidia
+    volumes:
+      - ../data:/app/data
+      - ../uploads:/tmp/aegis_uploads
     environment:
       - OLLAMA_BASE_URL=http://ollama:11434
+      - AEGIS_OCR=0
+
+volumes:
+  ollama_storage:

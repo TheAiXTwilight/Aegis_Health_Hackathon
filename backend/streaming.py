@@ -86,4 +86,9 @@ async def stream(job_id: str) -> StreamingResponse:
     return StreamingResponse(
         token_stream(),
         media_type="text/plain; charset=utf-8",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

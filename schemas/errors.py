@@ -16,6 +16,7 @@ class ToolError(BaseModel):
     """
 
     tool: str
+    code: str | None = None
     reason: str
     timestamp: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)

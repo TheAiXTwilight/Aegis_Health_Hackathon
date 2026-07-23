@@ -45,6 +45,8 @@ class PipelineJob(BaseModel):
 
     job_id: str = Field(default_factory=lambda: str(uuid4()))
     session_id: str
+    user_id: str | None = None
+    priority: int = Field(default=1, ge=1, le=5)
     status: JobStatus = JobStatus.QUEUED
     submitted_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
@@ -53,4 +55,4 @@ class PipelineJob(BaseModel):
     completed_at: datetime | None = None
     error: str | None = None
 
-    schema_version: str = "1.0"
+    schema_version: str = "1.1"

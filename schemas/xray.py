@@ -28,4 +28,14 @@ class XRayResult(BaseModel):
         ),
     )
 
+    heatmap_path: str | None = Field(
+        default=None,
+        description="Local path to generated Grad-CAM heatmap PNG artifact.",
+    )
+
+    heatmap_url: str | None = Field(
+        default=None,
+        description="API endpoint URL to fetch the Grad-CAM heatmap.",
+    )
+
     schema_version: str = "1.0"
