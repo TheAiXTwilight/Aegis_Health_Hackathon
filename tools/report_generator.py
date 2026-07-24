@@ -76,6 +76,7 @@ Refactor (backend-first content generation):
 from __future__ import annotations
 
 
+import asyncio
 import json as _json
 import math
 import os
@@ -112,6 +113,22 @@ NUM_CTX                = 4096
 RESERVE_OUTPUT         = 2200
 MAX_INPUT_TOKENS       = NUM_CTX - RESERVE_OUTPUT
 APPROX_CHARS_PER_TOKEN = 4
+
+
+# ── Section-reveal pacing ──────────────────────────────────────────
+# The deterministic report is built as one complete string, then
+# streamed to the client. Previously it went out in a single yield,
+# so any "pause" the UI appeared to show between sections (Patient
+# Information → Date of Birth → Reported Symptoms, etc.) was really
+# just an artifact of arbitrary TCP/HTTP chunk boundaries landing
+# inside an already-finished string — not a real, controllable pause.
+#
+# Yielding one section at a time with a small sleep between them
+# gives an actual, intentional pause at section boundaries instead.
+# Override via env var, e.g. AEGIS_REPORT_SECTION_PAUSE_SECONDS=0.15
+SECTION_REVEAL_PAUSE_SECONDS = float(
+    os.getenv("AEGIS_REPORT_SECTION_PAUSE_SECONDS", "0.2")
+)
 
 
 # ── Report contract ───────────────────────────────────────────────
@@ -3818,4 +3835,15 @@ class ReportGenerator:
             truncated_enrichment=state.enrichment_fields_truncated,
         )
 
-        yield clean_text
+        # ── Stream section-by-section instead of one giant chunk ───
+        # state.report above already holds the full clean_text, so
+        # nothing downstream (validation, TriageReport, caching) is
+        # affected by how we choose to stream it here — this only
+        # changes what the client sees arrive over time.
+        sections = _re.split(r"(?=^### )", clean_text, flags=_re.MULTILINE)
+        for section in sections:
+            if not section.strip():
+                continue
+            yield section
+            if SECTION_REVEAL_PAUSE_SECONDS > 0:
+                await asyncio.sleep(SECTION_REVEAL_PAUSE_SECONDS)

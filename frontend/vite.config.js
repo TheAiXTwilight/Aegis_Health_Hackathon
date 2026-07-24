@@ -17,6 +17,7 @@ export default defineConfig({
       '/vitals':   { target: 'http://localhost:8000', changeOrigin: true },  // ← ADD
       '/metrics':  { target: 'http://localhost:8000', changeOrigin: true },  // ← ADD
       '/readyz':   { target: 'http://localhost:8000', changeOrigin: true },  // ← ADD
+      '/tts':      { target: 'http://localhost:8000', changeOrigin: true },
     },
   },
 })

@@ -537,6 +537,24 @@ async def _execute_job(job: PipelineJob, pipeline: PipelineRunner) -> None:
         session_id=job.session_id,
     )
 
+    # Kick off Piper TTS voice warmup in the background the moment this
+    # job starts running. Model load (~500ms cold) + one throwaway
+    # inference (~150ms) overlap with the report-generation pipeline
+    # itself, which takes many seconds — so by the time the report is
+    # finished and the user clicks Voice TTS, the model is already
+    # loaded and the first click pays zero warmup cost. Fire-and-forget:
+    # tts_synthesizer.warmup() is thread-safe, idempotent (skips the
+    # throwaway inference if already loaded), and swallows all errors
+    # internally. We do NOT await this — it must not block or slow
+    # down the actual report pipeline. Import inside the function so
+    # a Piper install failure never breaks the queue module.
+    try:
+        from tools import tts_synthesizer
+        asyncio.create_task(asyncio.to_thread(tts_synthesizer.warmup))
+    except Exception:
+        # Never let a warmup scheduling problem fail the job itself.
+        logger.debug("queue · could not schedule TTS warmup (non-fatal)")
+
     try:
         if job.session_id not in _session_states:
             raise RuntimeError(
@@ -585,7 +603,19 @@ async def _execute_job(job: PipelineJob, pipeline: PipelineRunner) -> None:
 
         async with asyncio.timeout(PIPELINE_TIMEOUT_S):
             async for token in pipeline.run(state):
-                _save_checkpoint(job.job_id, state)
+                # _save_checkpoint() does synchronous disk I/O
+                # (serializes the full pipeline state to JSON and
+                # writes it to /tmp). Calling it directly here blocks
+                # the event loop on every single streamed chunk — and
+                # now that the report streams per-section instead of
+                # as one blob, that's ~11 blocking writes per report
+                # instead of 1, which was smearing the intended pacing
+                # gaps between sections unpredictably. Route it
+                # through a worker thread so it never blocks the loop,
+                # regardless of how many chunks the pipeline yields.
+                asyncio.create_task(
+                    asyncio.to_thread(_save_checkpoint, job.job_id, state)
+                )
                 try:
                     await asyncio.wait_for(
                         stream_q.put(token),
@@ -611,6 +641,23 @@ async def _execute_job(job: PipelineJob, pipeline: PipelineRunner) -> None:
 
         job.status       = JobStatus.COMPLETED
         job.completed_at = datetime.now(timezone.utc)
+
+        # Start voice synthesis now, in the background, so it runs in
+        # parallel with the user reading the report instead of only
+        # starting when/if they click "Voice TTS". This schedules the
+        # work and returns immediately — it does not block job
+        # completion, and Piper itself runs in a worker thread (see
+        # backend/tts_cache.py), so it does not stall the event loop.
+        if state.report is not None and getattr(state.report, "text", None):
+            try:
+                from backend.tts_cache import start_background_synthesis
+                start_background_synthesis(job.job_id, state.report.text)
+            except Exception:
+                # Never let a TTS scheduling problem fail the job itself.
+                logger.warning(
+                    "queue · failed to schedule background TTS synthesis",
+                    job_id=job.job_id,
+                )
 
         if job.started_at is not None:
             duration = (job.completed_at - job.started_at).total_seconds()

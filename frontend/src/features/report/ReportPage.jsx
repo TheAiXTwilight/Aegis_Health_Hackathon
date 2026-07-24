@@ -7,6 +7,8 @@ import {
   getJobStatus,
   getRecords,
   streamReport,
+  synthesizeSpeech,
+  synthesizeSpeechStream,
 } from "../../services/api";
 import "./Report.css";
 
@@ -195,14 +197,6 @@ function getStepStatus(toolsRun, toolsFailed, currentTool, toolKeys, optionalFai
   const anyFailedRequired = failedRequiredTools.length > 0;
   const anyOptionalFailed = toolKeys.some((t) => toolsFailed.includes(t) && optionalFailedTools.includes(t));
 
-  // A tool the planner chose not to run at all (e.g. DrugInteractionChecker
-  // excluded from the plan) is neither "run" nor "failed" — it's simply
-  // absent from both lists. Once the job has finished, such a tool should
-  // not keep its step stuck on "pending" forever: only tools that were
-  // actually run need to be counted as done. Blocking on a tool that was
-  // never going to run made completed jobs show earlier steps as
-  // perpetually "Pending" even though nothing was actually still in
-  // progress (see Live Pipeline "Evidence & Drug Check" bug).
   const jobFinished = jobStatus === "completed" || jobStatus === "failed";
   const relevantTools = jobFinished
     ? toolKeys.filter((t) => toolsRun.includes(t) || toolsFailed.includes(t))
@@ -215,7 +209,7 @@ function getStepStatus(toolsRun, toolsFailed, currentTool, toolKeys, optionalFai
   if (anyFailedRequired) return "failed";
   if (allRequiredDone || anyOptionalFailed) return "done";
   if (jobFinished && !anyAttempted) return "skipped";
-  if (jobFinished) return "done"; // job is over; nothing left to wait for
+  if (jobFinished) return "done";
   return "pending";
 }
 
@@ -263,7 +257,13 @@ export default function ReportPage() {
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
   const [currentHistoryItem, setCurrentHistoryItem] = useState(null);
   const [isReadingOut, setIsReadingOut] = useState(false);
+  const [isPreparingReadout, setIsPreparingReadout] = useState(false);
   const [menuCoords, setMenuCoords] = useState(null);
+  const ttsAudioRef = useRef(null);
+  const ttsObjectUrlRef = useRef(null);
+  // Holds the stop() function for the active streaming TTS session.
+  // Null when not streaming (non-streaming fallback uses ttsAudioRef).
+  const ttsStreamStopRef = useRef(null);
   const [forceDeleteTick, setForceDeleteTick] = useState(0);
   // True once we've resolved whether history has any reports to fall back to.
   // Prevents flashing "No Active Analysis" while history is still loading.
@@ -286,7 +286,25 @@ export default function ReportPage() {
   }, [jobId]);
 
   useEffect(() => { if (user?.id) loadReportHistory(); }, [user?.id, loadReportHistory]);
-  useEffect(() => { return () => { if ("speechSynthesis" in window) window.speechSynthesis.cancel(); }; }, []);
+
+  // Stop all playback and release resources on unmount so audio does
+  // not keep playing after navigating away from the report page.
+  useEffect(() => {
+    return () => {
+      if (ttsStreamStopRef.current) {
+        try { ttsStreamStopRef.current(); } catch {}
+        ttsStreamStopRef.current = null;
+      }
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause();
+        ttsAudioRef.current = null;
+      }
+      if (ttsObjectUrlRef.current) {
+        URL.revokeObjectURL(ttsObjectUrlRef.current);
+        ttsObjectUrlRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -309,18 +327,14 @@ export default function ReportPage() {
     setOpenMenuIndex(index);
     if (!rect) return;
 
-    // Dropdown geometry constants (must stay in sync with .dropdown-menu CSS):
-    //   padding: 6px, gap between items: 4px, item height ≈ 40px
-    //   → first item's vertical center sits ~26px below popover top.
     const FIRST_ITEM_CENTER_OFFSET = 26;
     const MENU_WIDTH_ESTIMATE = 190;
-    const MENU_HEIGHT_ESTIMATE = 4 * 40 + 3 * 4 + 12; // 4 items + 3 gaps + padding
+    const MENU_HEIGHT_ESTIMATE = 4 * 40 + 3 * 4 + 12;
 
     const dotsCenterY = rect.top + rect.height / 2;
     let top = dotsCenterY - FIRST_ITEM_CENTER_OFFSET;
-    let left = rect.right + 8; // open to the right of the dots
+    let left = rect.right + 8;
 
-    // Clamp to viewport so the menu never gets clipped
     const viewportH = window.innerHeight;
     const viewportW = window.innerWidth;
     if (top + MENU_HEIGHT_ESTIMATE > viewportH - 8) {
@@ -328,7 +342,6 @@ export default function ReportPage() {
     }
     if (top < 8) top = 8;
     if (left + MENU_WIDTH_ESTIMATE > viewportW - 8) {
-      // No room on the right — flip to the left of the dots
       left = rect.left - MENU_WIDTH_ESTIMATE - 8;
     }
     if (left < 8) left = 8;
@@ -468,9 +481,6 @@ export default function ReportPage() {
     });
   }, [jobId, statusPayload?.status, reportText, resultData]);
 
-  // When there's no jobId in the URL (e.g. navigating to "Report" from the
-  // navbar) but the user already has report history, fall back to showing
-  // their most recent report instead of a false "No Active Analysis" state.
   const fallbackHistoryItem = !jobId && reportHistoryList.length > 0 ? reportHistoryList[0] : null;
 
   const activeHistoryItem = selectedHistoryItem || currentHistoryItem || fallbackHistoryItem;
@@ -479,87 +489,173 @@ export default function ReportPage() {
   const activeResultData = activeHistoryItem && activeHistoryItem.jobId !== jobId ? activeHistoryItem.resultData : resultData;
   const activeJobStatus = activeHistoryItem && activeHistoryItem.jobId !== jobId ? activeHistoryItem.status : jobStatus;
 
-  const toggleVoiceReadout = () => {
+  // Stop all active TTS playback (streaming or non-streaming).
+  const stopReadout = useCallback(() => {
+    if (ttsStreamStopRef.current) {
+      try { ttsStreamStopRef.current(); } catch {}
+      ttsStreamStopRef.current = null;
+    }
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause();
+      ttsAudioRef.current.currentTime = 0;
+    }
+    setIsReadingOut(false);
+    setIsPreparingReadout(false);
+  }, []);
+
+  const toggleVoiceReadout = async () => {
     const textToSpeak = activeReportText || reportText;
     if (!textToSpeak) return;
-    if (!("speechSynthesis" in window)) {
-      alert("Text-to-speech is not supported in your browser.");
+
+    if (isReadingOut || isPreparingReadout) {
+      stopReadout();
       return;
     }
 
-    if (isReadingOut || window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-      window.speechSynthesis.cancel();
-      setIsReadingOut(false);
-      return;
-    }
+    setIsPreparingReadout(true);
 
-    const speakNow = () => {
-      window.speechSynthesis.cancel();
-      const cleanText = textToSpeak
-        .replace(/#{1,6}\s?/g, "")
-        .replace(/\*\*/g, "")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-        .replace(/[-*•]/g, "");
+    // ── Streaming path (primary) ──────────────────────────────────
+    // synthesizeSpeechStream() constructs and resumes its
+    // AudioContext synchronously at the very top of the function,
+    // before any await, satisfying browser autoplay policy. Playback
+    // begins after the first synthesized segment (~100-300 ms) rather
+    // than after the full report is synthesized.
+    let streamHandle = null;
+    try {
+      streamHandle = await synthesizeSpeechStream(textToSpeak, activeJobId);
 
-      // A full clinical report is easily 3000-8000+ characters.
-      // SpeechSynthesisUtterance silently fails or stalls on very long
-      // single utterances in Chrome (a long-standing browser bug —
-      // speech stops after ~15s and never resumes/fires onend). Split
-      // into sentence-sized chunks and queue them so long reports are
-      // read out reliably start to finish.
-      const chunks = cleanText
-        .split(/(?<=[.!?])\s+/)
-        .reduce((acc, sentence) => {
-          const last = acc[acc.length - 1];
-          if (last && (last + " " + sentence).length < 200) {
-            acc[acc.length - 1] = last + " " + sentence;
-          } else {
-            acc.push(sentence);
-          }
-          return acc;
-        }, [])
-        .filter((chunk) => chunk.trim().length > 0);
+      ttsStreamStopRef.current = streamHandle.stop;
+      setIsPreparingReadout(false);
+      setIsReadingOut(true);
 
-      if (chunks.length === 0) return;
-
-      let index = 0;
-      const speakNextChunk = () => {
-        if (index >= chunks.length) {
+      // Reset UI when the stream finishes — either naturally, or
+      // early via stop(), or without ever scheduling audio (server
+      // sent header only). The allEndedPromise contract guarantees
+      // exactly one resolution.
+      streamHandle.allEndedPromise.then(() => {
+        if (ttsStreamStopRef.current === streamHandle.stop) {
           setIsReadingOut(false);
+          ttsStreamStopRef.current = null;
+        }
+      });
+
+      return;
+    } catch (streamErr) {
+      // Clean up any partial stream state.
+      if (ttsStreamStopRef.current) {
+        try { ttsStreamStopRef.current(); } catch {}
+        ttsStreamStopRef.current = null;
+      }
+      // Force UI back to idle in case setIsReadingOut(true) already ran.
+      setIsReadingOut(false);
+
+      // Hard failures the non-streaming fallback cannot fix either —
+      // surface them immediately.
+      if (streamErr?.reason === 'model_missing') {
+        setIsPreparingReadout(false);
+        alert(
+          "Voice readout isn't set up on this server yet. " +
+          "The text-to-speech voice model needs to be installed " +
+          "(see backend/tts.py setup instructions)."
+        );
+        console.error("Voice readout failed:", streamErr);
+        return;
+      }
+      if (streamErr?.reason === 'text_too_long') {
+        setIsPreparingReadout(false);
+        alert("This report is too long to read aloud in one go.");
+        console.error("Voice readout failed:", streamErr);
+        return;
+      }
+      if (streamErr?.reason === 'autoplay_blocked') {
+        setIsPreparingReadout(false);
+        alert("Please click the Voice TTS button again to start playback.");
+        console.warn(
+          "Voice readout blocked by browser autoplay policy:",
+          streamErr
+        );
+        return;
+      }
+
+      // Transient or network failure — fall through to the
+      // non-streaming path so the user still gets audio.
+      console.warn(
+        "Streaming TTS failed, falling back to non-streaming:",
+        streamErr
+      );
+    }
+
+    // ── Non-streaming fallback ────────────────────────────────────
+    // Behaviour is identical to the original implementation before
+    // streaming was added. Used when the /speak/stream endpoint is
+    // unavailable or fails transiently.
+    try {
+      const audioBlob = await synthesizeSpeech(textToSpeak, activeJobId);
+
+      if (ttsObjectUrlRef.current) {
+        URL.revokeObjectURL(ttsObjectUrlRef.current);
+      }
+      const objectUrl = URL.createObjectURL(audioBlob);
+      ttsObjectUrlRef.current = objectUrl;
+
+      const audio = new Audio(objectUrl);
+      ttsAudioRef.current = audio;
+      audio.onended = () => {
+        setIsReadingOut(false);
+      };
+      audio.onerror = () => {
+        setIsReadingOut(false);
+        setIsPreparingReadout(false);
+        alert("Playback failed. Please try again.");
+      };
+
+      setIsPreparingReadout(false);
+      setIsReadingOut(true);
+      try {
+        await audio.play();
+      } catch (playErr) {
+        if (playErr?.name === "NotAllowedError") {
+          // Browser autoplay policy: play() must run inside the same
+          // trusted user-gesture as the click, with no `await` in
+          // between. By the time synthesizeSpeech()'s network call
+          // resolves, the browser no longer treats this play() as
+          // gesture-triggered and blocks it — even though synthesis
+          // itself succeeded and `audio` is fully loaded and ready.
+          // Reset to the idle state; the button's next click is a
+          // fresh gesture against the already-ready audio, so it
+          // plays instantly with no re-fetch.
+          setIsReadingOut(false);
+          setIsPreparingReadout(false);
           return;
         }
-        const utterance = new SpeechSynthesisUtterance(chunks[index]);
-        utterance.rate = 1.0;
-        utterance.onend = () => {
-          index += 1;
-          speakNextChunk();
-        };
-        utterance.onerror = () => setIsReadingOut(false);
-        window.speechSynthesis.speak(utterance);
-      };
-
-      setIsReadingOut(true);
-      speakNextChunk();
-    };
-
-    // On first use in a session, window.speechSynthesis.getVoices() can
-    // return an empty array because voices load asynchronously — calling
-    // .speak() before they're ready causes some browsers (notably
-    // Chrome) to silently no-op. Wait for the voiceschanged event once
-    // if voices aren't ready yet, then speak.
-    if (window.speechSynthesis.getVoices().length === 0) {
-      const onVoicesReady = () => {
-        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
-        speakNow();
-      };
-      window.speechSynthesis.addEventListener("voiceschanged", onVoicesReady);
-      // Fallback in case voiceschanged never fires on this browser.
-      window.setTimeout(() => {
-        window.speechSynthesis.removeEventListener("voiceschanged", onVoicesReady);
-        speakNow();
-      }, 300);
-    } else {
-      speakNow();
+        throw playErr;
+      }
+    } catch (err) {
+      setIsPreparingReadout(false);
+      setIsReadingOut(false);
+      if (err?.reason === "model_missing") {
+        alert(
+          "Voice readout isn't set up on this server yet. " +
+          "The text-to-speech voice model needs to be installed " +
+          "(see backend/tts.py setup instructions)."
+        );
+      } else if (err?.reason === "text_too_long") {
+        alert("This report is too long to read aloud in one go.");
+      } else if (err?.reason === "timeout") {
+        alert("Voice readout is taking too long and was cancelled. Please try again.");
+      } else if (err?.name === "NotAllowedError") {
+        // Browser autoplay policy: play() must run inside the same trusted
+        // user-gesture as the click, with no `await` in between. By the
+        // time synthesizeSpeech()'s network call resolves, the browser no
+        // longer treats the resulting play() as gesture-triggered and
+        // blocks it. The audio is already fetched and cached in
+        // ttsAudioRef at this point, so a second click plays instantly
+        // and *is* a fresh gesture — it will succeed.
+        alert("Tap the readout button again to start playback.");
+      } else {
+        alert("Voice readout failed. Please try again.");
+      }
+      console.error("Voice readout failed:", err);
     }
   };
 
@@ -590,25 +686,15 @@ export default function ReportPage() {
     try {
       await deleteJob(targetJobId);
 
-      // Remove the deleted report from history first, so the fallback
-      // logic below picks the *next* most recent remaining report.
       const remainingHistory = reportHistoryList.filter((h) => h.jobId !== targetJobId);
       setReportHistoryList(remainingHistory);
 
-      // If the deleted report was the one currently being viewed, clear
-      // the view state but stay on /report — do NOT navigate away.
-      // The page will naturally fall back to the next most recent report
-      // in remainingHistory (via fallbackHistoryItem), or show the empty
-      // state only if remainingHistory is now empty.
       setSelectedHistoryItem((prev) => (prev?.jobId === targetJobId ? null : prev));
       if (currentHistoryItem?.jobId === targetJobId || jobId === targetJobId) {
         setCurrentHistoryItem(null);
         setReportText("");
         setResultData(null);
         setStatusPayload(null);
-        // Only touch the URL if it was pointing at the deleted job — and
-        // even then, stay on /report (no full navigation/redirect), just
-        // drop the now-invalid jobId query param.
         if (jobId === targetJobId) {
           navigate("/report", { replace: true });
         }
@@ -621,8 +707,6 @@ export default function ReportPage() {
   };
 
   if (!jobId && !fallbackHistoryItem) {
-    // Still loading history — avoid flashing the empty state while we
-    // don't yet know if the user has prior reports to fall back to.
     if (!historyLoaded) {
       return (
         <div className="form-center-container">
@@ -634,10 +718,6 @@ export default function ReportPage() {
         </div>
       );
     }
-    // No reports at all (e.g. just deleted the last one) — /dashboard's
-    // EmptyDashboard already shows the correct "Health Scan / Fill the
-    // Form" state for this exact case. Redirect there instead of
-    // duplicating a second, separate empty-state screen here.
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -807,12 +887,12 @@ export default function ReportPage() {
                 </svg>
                 <span>Key Insights</span>
               </button>
-              <button onClick={toggleVoiceReadout} disabled={!activeReportText} style={{ background: isReadingOut ? "rgba(37, 99, 255, 0.25)" : "rgba(255, 255, 255, 0.2)", border: `1px solid ${isReadingOut ? "#2563ff" : "rgba(255, 255, 255, 0.4)"}`, borderRadius: "14px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px", cursor: activeReportText ? "pointer" : "not-allowed", color: isReadingOut ? "#2563ff" : "#0d2167", fontWeight: 700, fontSize: "13px", transition: "all 0.2s ease" }} title={isReadingOut ? "Stop Voice Readout" : "Start Voice Readout"}>
+              <button onClick={toggleVoiceReadout} disabled={!activeReportText || isPreparingReadout} style={{ background: isReadingOut ? "rgba(37, 99, 255, 0.25)" : "rgba(255, 255, 255, 0.2)", border: `1px solid ${isReadingOut ? "#2563ff" : "rgba(255, 255, 255, 0.4)"}`, borderRadius: "14px", padding: "10px 14px", display: "flex", alignItems: "center", gap: "8px", cursor: (activeReportText && !isPreparingReadout) ? "pointer" : "not-allowed", color: isReadingOut ? "#2563ff" : "#0d2167", fontWeight: 700, fontSize: "13px", transition: "all 0.2s ease" }} title={isReadingOut ? "Stop Voice Readout" : "Start Voice Readout"}>
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                   {isReadingOut ? (<><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></>) : (<path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>)}
                 </svg>
-                <span>{isReadingOut ? "Stop Readout" : "Voice TTS"}</span>
+                <span>{isReadingOut ? "Stop Readout" : isPreparingReadout ? "Preparing..." : "Voice TTS"}</span>
               </button>
             </div>
           </div>

@@ -596,7 +596,7 @@ export async function getChatInit(jobId) {
  *
  * Args:
  *   jobId   — the completed report's job ID
- *   message — the user's question (1–1000 chars)
+ *   message — the user's question (1-1000 chars)
  *
  * Returns:
  *   {
@@ -658,6 +658,364 @@ export async function getMetrics() {
   return resp.text();
 }
 
+/* ── Text-to-speech (local, no external API) ──────────────────────── */
+
+/**
+ * POST /tts/speak — synthesize text to speech entirely on-server via
+ * Piper. Returns a Blob (audio/wav) for playback via an <audio>
+ * element or URL.createObjectURL. Replaces the previous client-side
+ * window.speechSynthesis approach, which depended on OS-installed
+ * voices and silently produced no audio when none were present.
+ *
+ * Throws an Error with `.reason` set to the backend's machine-readable
+ * reason code ('model_missing', 'text_too_long', 'synthesis_failed',
+ * or 'timeout') when available, so callers can show a specific
+ * message.
+ *
+ * First-request latency: on the server's first call after startup,
+ * the Piper voice model has to be loaded from disk, which combined
+ * with synthesis itself for a long report can take a while. A
+ * client-side timeout still applies so the UI never hangs on
+ * "Preparing..." indefinitely if the server is unresponsive.
+ */
+const TTS_TIMEOUT_MS = 90_000;
+
+export async function synthesizeSpeech(text, jobId) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TTS_TIMEOUT_MS);
+  let resp;
+  try {
+    resp = await fetchWithAuth(url('tts/speak'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jobId ? { text, job_id: jobId } : { text }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      const timeoutErr = new Error('Speech synthesis timed out. Please try again.');
+      timeoutErr.reason = 'timeout';
+      throw timeoutErr;
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+  if (!resp.ok) {
+    let detail = `Speech synthesis failed: HTTP ${resp.status}`;
+    try {
+      const data = await resp.json();
+      detail = extractErrorMessage(data, detail);
+    } catch {
+      // Response wasn't JSON — keep the generic message.
+    }
+    const err = new Error(detail);
+    err.status = resp.status;
+    // 503 = voice model not installed on server; 413 = text too long.
+    if (resp.status === 503) err.reason = 'model_missing';
+    else if (resp.status === 413) err.reason = 'text_too_long';
+    else err.reason = 'synthesis_failed';
+    throw err;
+  }
+  return resp.blob();
+}
+
+/**
+ * POST /tts/speak/stream — streaming variant of synthesizeSpeech().
+ *
+ * Sends the same request but receives a chunked WAV stream. Uses the
+ * Web Audio API to decode and schedule each PCM chunk for gapless
+ * playback as it arrives, so audio starts after the first segment
+ * (~100-300 ms) instead of waiting for the full report (~2-5 s).
+ *
+ * IMPORTANT — autoplay policy: The AudioContext is constructed
+ * synchronously at the very top of this function, before any await,
+ * so the browser treats it as directly gesture-initiated. The caller
+ * MUST invoke this function directly from a click/tap handler with no
+ * async gap before the call site. Any await before calling this
+ * function will break AudioContext creation on Safari and Chrome.
+ *
+ * The AudioContext is also explicitly resumed after construction —
+ * on Chrome/Safari, an AudioContext created inside async flow can
+ * start in the "suspended" state, silently accepting scheduled audio
+ * that never actually plays. resume() must run inside the gesture
+ * turn to succeed.
+ *
+ * Returns { stop, allEndedPromise }:
+ *   stop()           — immediately halt playback and release resources.
+ *   allEndedPromise  — Promise that resolves when all scheduled audio
+ *                      has finished playing (use to reset UI state).
+ *
+ * Throws TTSError-shaped errors (with .reason) on network or server
+ * failure, matching the error contract of synthesizeSpeech(). May
+ * throw with reason='autoplay_blocked' if the browser refused to run
+ * the AudioContext despite the gesture — the caller should prompt the
+ * user to click again.
+ */
+const TTS_STREAM_TIMEOUT_MS = 120_000;
+
+export async function synthesizeSpeechStream(text, jobId) {
+  // Construct AudioContext synchronously — MUST be the first statement,
+  // before any await — so browsers allow it under autoplay policy.
+  // Do NOT force a sampleRate here — passing one the OS can't provide
+  // natively causes silent resampling glitches on some macOS/Safari
+  // setups. Let the browser pick the device rate; we resample when
+  // we build each AudioBuffer below.
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  const audioContext = new AudioCtx();
+
+  // Kick the context into the "running" state immediately, while we
+  // are still inside the click gesture. If we wait until after the
+  // fetch resolves, resume() no longer counts as gesture-initiated
+  // on Chrome/Safari and the context stays "suspended" forever —
+  // scheduled sources fire onended but no sound comes out.
+  const resumePromise = audioContext.resume().catch(() => {});
+
+  // Piper always emits 22050 Hz mono int16-LE PCM. We create the
+  // AudioBuffer at that rate and let Web Audio resample to the
+  // device rate at playback time, preserving pitch and duration.
+  const PIPER_SAMPLE_RATE = 22050;
+
+  let stopped = false;
+  const abortController = new AbortController();
+
+  function stop() {
+    if (stopped) return;
+    stopped = true;
+    abortController.abort();
+    try { audioContext.close(); } catch {}
+  }
+
+  // Tracks the scheduled end-time of the last queued audio chunk so
+  // each new chunk is scheduled to start exactly where the previous
+  // one ends (gapless playback). Initialised on the first chunk.
+  let nextStartTime = 0;
+
+  // Track in-flight AudioBufferSourceNodes so allEndedPromise
+  // resolves only after the last chunk has actually finished playing.
+  let pendingSources = 0;
+  let readerDone = false;
+
+  // Guard so allEndedPromise resolves at most once. Without this, a
+  // reader that finishes before any chunk is scheduled could resolve
+  // via both the "no chunks scheduled" fallback and a later onended
+  // event, causing double-resolution and confusing state tracking.
+  let allEndedResolved = false;
+
+  // True once at least one chunk has been scheduled. Prevents
+  // checkAllEnded() from resolving the promise before any audio has
+  // even started — e.g. if readerDone flips true from the initial
+  // header-only read before the first PCM chunk is ready.
+  let anyChunkScheduled = false;
+
+  let resolveAllEnded;
+  const allEndedPromise = new Promise((resolve) => {
+    resolveAllEnded = resolve;
+  });
+
+  function checkAllEnded() {
+    if (allEndedResolved) return;
+    if (!anyChunkScheduled) return;
+    if (!readerDone) return;
+    if (pendingSources > 0) return;
+    allEndedResolved = true;
+    resolveAllEnded();
+  }
+
+  function scheduleChunk(int16Bytes) {
+    if (stopped || int16Bytes.byteLength < 2) return;
+
+    // Enforce even byte count (each int16 sample = 2 bytes).
+    const byteLen = int16Bytes.byteLength - (int16Bytes.byteLength % 2);
+    if (byteLen === 0) return;
+
+    // Copy the bytes into a fresh, aligned ArrayBuffer. The Uint8Array
+    // we received from fetch may not sit on a 2-byte boundary within
+    // its underlying ArrayBuffer, which throws RangeError when passed
+    // to new Int16Array(buffer, offset, len). Copying costs an O(n)
+    // walk but guarantees alignment on every browser.
+    const aligned = new ArrayBuffer(byteLen);
+    new Uint8Array(aligned).set(
+      new Uint8Array(int16Bytes.buffer, int16Bytes.byteOffset, byteLen)
+    );
+    const int16 = new Int16Array(aligned);
+
+    // Convert int16 [-32768, 32767] to float32 [-1.0, 1.0] for Web Audio.
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) {
+      float32[i] = int16[i] / 32768;
+    }
+
+    // Build the AudioBuffer at Piper's native rate. The Web Audio
+    // graph automatically resamples to the device rate on playback.
+    const audioBuffer = audioContext.createBuffer(
+      1,                    // mono
+      float32.length,
+      PIPER_SAMPLE_RATE
+    );
+    audioBuffer.getChannelData(0).set(float32);
+
+    const source = audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioContext.destination);
+
+    // Initialise nextStartTime on the first chunk. Using
+    // audioContext.currentTime + a tiny lead-in gives the browser a
+    // moment to actually begin playback rather than scheduling the
+    // start exactly at "now" (which some browsers treat as already
+    // past and skip).
+    if (!anyChunkScheduled) {
+      nextStartTime = audioContext.currentTime + 0.05;
+    }
+
+    // Schedule gaplessly after the previous chunk.
+    const startAt = Math.max(nextStartTime, audioContext.currentTime);
+    source.start(startAt);
+    nextStartTime = startAt + audioBuffer.duration;
+
+    pendingSources++;
+    anyChunkScheduled = true;
+    source.onended = () => {
+      pendingSources--;
+      checkAllEnded();
+    };
+  }
+
+  // ── Open the stream ─────────────────────────────────────────────
+  const timeoutId = setTimeout(
+    () => abortController.abort(),
+    TTS_STREAM_TIMEOUT_MS
+  );
+  let resp;
+  try {
+    // Wait for resume() to complete before starting the fetch so
+    // we don't miss the gesture window.
+    await resumePromise;
+    resp = await fetchWithAuth(url('tts/speak/stream'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jobId ? { text, job_id: jobId } : { text }),
+      signal: abortController.signal,
+    });
+  } catch (err) {
+    clearTimeout(timeoutId);
+    stop();
+    if (err.name === 'AbortError') {
+      const e = new Error('Speech synthesis timed out. Please try again.');
+      e.reason = 'timeout';
+      throw e;
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
+
+  if (!resp.ok) {
+    stop();
+    let detail = `Speech synthesis failed: HTTP ${resp.status}`;
+    try {
+      const data = await resp.json();
+      detail = extractErrorMessage(data, detail);
+    } catch {
+      // Response was not JSON — keep the generic message.
+    }
+    const err = new Error(detail);
+    err.status = resp.status;
+    if (resp.status === 503) err.reason = 'model_missing';
+    else if (resp.status === 413) err.reason = 'text_too_long';
+    else err.reason = 'synthesis_failed';
+    throw err;
+  }
+
+  // If the AudioContext failed to enter the "running" state, tell
+  // the caller so it can prompt the user for another click. This
+  // happens on Safari/Chrome when the click gesture was consumed by
+  // something else before we got here.
+  if (audioContext.state !== 'running') {
+    stop();
+    const err = new Error(
+      'Browser blocked audio playback (AudioContext suspended). ' +
+      'Please click the readout button again.'
+    );
+    err.reason = 'autoplay_blocked';
+    throw err;
+  }
+
+  // ── Consume the chunked WAV stream in the background ────────────
+  //
+  // Server sends: [44-byte WAV header] [PCM chunk...] [PCM chunk...]
+  // We skip the header bytes and schedule each PCM chunk for Web
+  // Audio playback as it arrives. TCP may split or merge chunks
+  // arbitrarily, so we buffer across reads to:
+  //   (a) accumulate the full 44-byte header before skipping it, and
+  //   (b) maintain int16 alignment (2 bytes per sample) across reads.
+
+  const reader = resp.body.getReader();
+  let headerConsumed = false;
+  let leftovers = new Uint8Array(0); // carries the odd byte between reads
+
+  (async () => {
+    try {
+      while (!stopped) {
+        const { done, value } = await reader.read();
+        if (done || stopped) break;
+
+        // Prepend any leftover byte from the previous read.
+        let incoming;
+        if (leftovers.length > 0) {
+          incoming = new Uint8Array(leftovers.length + value.length);
+          incoming.set(leftovers);
+          incoming.set(value, leftovers.length);
+          leftovers = new Uint8Array(0);
+        } else {
+          incoming = value;
+        }
+
+        // Accumulate until we have the full 44-byte WAV header.
+        if (!headerConsumed) {
+          if (incoming.length < 44) {
+            leftovers = incoming;
+            continue;
+          }
+          incoming = incoming.slice(44);
+          headerConsumed = true;
+        }
+
+        if (incoming.length === 0) continue;
+
+        // Save the trailing odd byte for the next iteration so we
+        // never pass a non-integer number of int16 samples to
+        // scheduleChunk.
+        if (incoming.length % 2 !== 0) {
+          leftovers = incoming.slice(incoming.length - 1);
+          incoming = incoming.slice(0, incoming.length - 1);
+        }
+
+        if (incoming.length > 0) {
+          scheduleChunk(incoming);
+        }
+      }
+    } catch (err) {
+      if (!stopped && err.name !== 'AbortError') {
+        console.error('TTS stream read error:', err);
+      }
+    } finally {
+      readerDone = true;
+      // If the reader finished without ever scheduling a chunk
+      // (e.g. server sent header only, or errored immediately),
+      // resolve the promise so the caller doesn't hang on the
+      // "Stop Readout" state forever.
+      if (!anyChunkScheduled && !allEndedResolved) {
+        allEndedResolved = true;
+        resolveAllEnded();
+      } else {
+        checkAllEnded();
+      }
+    }
+  })();
+
+  return { stop, allEndedPromise };
+}
+
 /* ── Default export (object with all functions) ──────────────────── */
 
 export default {
@@ -702,4 +1060,8 @@ export default {
   // Vitals
   submitVitalsCheckin,
   getVitalsTrends,
+
+  // Text-to-speech
+  synthesizeSpeech,
+  synthesizeSpeechStream,
 };

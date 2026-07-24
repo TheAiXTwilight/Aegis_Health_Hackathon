@@ -108,6 +108,15 @@ from app.auth import get_optional_user, get_current_user
 from backend.exports import router as export_router
 from backend.account import router as account_router
 from backend.auth import router as auth_router
+from backend.tts import router as tts_router
+
+# Piper TTS synthesizer — imported so the lifespan handler can run the
+# idle-eviction monitor task. Warmup itself is triggered on demand from
+# backend/queue.py (when a report job starts running) and from
+# backend/tts.py (when the frontend polls /tts/status/{job_id}), so we
+# do NOT preload the voice at server startup — that would waste ~180MB
+# on servers where nobody clicks Voice TTS.
+from tools import tts_synthesizer
 
 UPLOAD_ROOT = Path("/tmp/aegis_uploads")
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
@@ -232,6 +241,52 @@ def _tool_error_response(err: ToolError, status_code: int) -> JSONResponse:
     )
 
 
+# ── TTS idle-eviction monitor ─────────────────────────────────────
+async def _tts_idle_monitor() -> None:
+    """
+    Background task that unloads the Piper voice model after
+    AEGIS_TTS_IDLE_EVICT_SECS of no TTS activity, reclaiming ~180MB.
+
+    Runs for the application lifetime, started/stopped by the lifespan
+    handler. Checks every AEGIS_TTS_IDLE_CHECK_SECS. The eviction
+    itself is cheap (dropping a Python reference so the GC can reclaim
+    the ONNX session); reload on next TTS request is transparent —
+    the request just pays the ~500ms cold-load cost once.
+
+    A setting of AEGIS_TTS_IDLE_EVICT_SECS <= 0 disables eviction
+    entirely (voice stays loaded until process exit once first used).
+    """
+    evict_after = settings.AEGIS_TTS_IDLE_EVICT_SECS
+    check_interval = settings.AEGIS_TTS_IDLE_CHECK_SECS
+
+    if evict_after <= 0:
+        logger.info("TTS idle-eviction disabled (AEGIS_TTS_IDLE_EVICT_SECS <= 0)")
+        return
+
+    logger.info(
+        "TTS idle-eviction monitor started",
+        evict_after_secs=evict_after,
+        check_interval_secs=check_interval,
+    )
+
+    while True:
+        try:
+            await asyncio.sleep(check_interval)
+            if not tts_synthesizer.is_loaded():
+                continue
+            idle_secs = tts_synthesizer.seconds_since_last_activity()
+            if idle_secs > evict_after:
+                # Run eviction in a thread so the lock acquisition (which
+                # could briefly wait behind an in-flight synthesis) never
+                # blocks the event loop.
+                await asyncio.to_thread(tts_synthesizer.evict_voice)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Never let a monitor error kill the task. Log and continue.
+            logger.exception("TTS idle monitor iteration failed (continuing)")
+
+
 # ── Lifespan ─────────────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -241,6 +296,12 @@ async def lifespan(app: FastAPI):
 
     register_purge_callback is idempotent — re-entering lifespan in tests
     does not accumulate duplicate registrations.
+
+    Also starts the TTS idle-eviction monitor (see _tts_idle_monitor).
+    Note we do NOT preload the Piper voice at boot — warmup happens
+    on-demand when a report job starts running (backend/queue.py) or
+    when the frontend polls /tts/status (backend/tts.py). This keeps
+    ~180MB free on servers where nobody clicks Voice TTS.
     """
     logger.info("Starting Aegis Health", db_url=settings.AEGIS_DB_URL, seed_demo=settings.AEGIS_SEED_DEMO_USERS)
     init_db()
@@ -256,6 +317,11 @@ async def lifespan(app: FastAPI):
     register_purge_callback(cleanup_session_uploads)
     worker_task = asyncio.create_task(run_inference_worker(pipeline))
     logger.info("Inference worker started")
+
+    # Start the TTS idle-eviction monitor. Runs for the app lifetime,
+    # cancelled cleanly in the finally block below.
+    tts_monitor_task = asyncio.create_task(_tts_idle_monitor())
+
     try:
         yield
     finally:
@@ -263,6 +329,11 @@ async def lifespan(app: FastAPI):
         with contextlib.suppress(asyncio.CancelledError):
             await worker_task
         logger.info("Inference worker stopped")
+
+        tts_monitor_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await tts_monitor_task
+        logger.info("TTS idle-eviction monitor stopped")
 
 
 # ── App ──────────────────────────────────────────────────────────
@@ -736,6 +807,7 @@ app.include_router(vitals_router)
 app.include_router(chat_router)
 app.include_router(dashboard_router)
 app.include_router(records_router)
+app.include_router(tts_router)
 
 from backend.security import install_security
 install_security(app)
