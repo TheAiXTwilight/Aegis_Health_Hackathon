@@ -302,7 +302,7 @@
 .dashv2-sbvitals-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden !important;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1365,6 +1365,21 @@
   margin-bottom: 2px;
   flex-shrink: 0;
   transition: background 0.15s ease;
+}
+
+/* Rows keep their natural fixed height (same as when 8 vitals are
+   shown) — they never stretch to fill extra space and never scroll.
+   With fewer vitals (e.g. 2), the rows sit at the top and the
+   remaining space is simply left blank below, as if the other slots
+   are present but invisible. The card's own size never changes. */
+.dashv2-sbvitals-scroll .dashv2-sbvitals-row {
+  flex: 0 0 auto;
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+.dashv2-sbvitals-scroll .dashv2-sbvitals-group-label {
+  flex: 0 0 auto;
 }
 
 .dashv2-sbvitals-row:hover { background: rgba(255,255,255,0.14); }
@@ -2889,4 +2904,3 @@
   align-self: stretch;
   padding-top: 0;
 }
-

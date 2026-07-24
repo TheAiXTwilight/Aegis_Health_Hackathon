@@ -2421,11 +2421,12 @@ function QuickSignalsCard({ L, trend, variant }) {
 
 function SidebarVitals({ vitalObs, currentReport, previousReport, nav }) {
   // Sidebar uses 8 slots (has room for one more than the comparison table)
+  // Shows vitals from the current report's own lab/measurement data —
+  // not gated on whether a comparison report shares the same vitals.
   const currentMeasurements = currentReport?.measurements || [];
-  const previousMeasurements = previousReport?.measurements || null;
   const { selected, overflowCount } = selectPriorityVitalsWithVitalSignBoost(
     currentMeasurements,
-    previousMeasurements,
+    null,
     8
   );
 
@@ -2492,7 +2493,7 @@ function SidebarVitals({ vitalObs, currentReport, previousReport, nav }) {
       <div className="dashv2-sbvitals-scroll">
         {empty && (
           <p className="dashv2-analysis-paragraph">
-            No comparable vitals available across current and comparison reports.
+            No vitals data available in the current report.
           </p>
         )}
 
@@ -2548,19 +2549,17 @@ function SidebarVitals({ vitalObs, currentReport, previousReport, nav }) {
 
 function buildMeasurementComparisonRows(currentReport, previousReport) {
   // Comparison table is layout-locked → only 6 vitals allowed.
-  // Uses the same vital-sign-boost helper as VitalsOverviewRow and
-  // SidebarVitals: any flagged (risk_score >= 1) core vital sign
-  // (BP, HR, SpO2, Temp, RR) is guaranteed a slot ahead of lab-panel
-  // values, so a flagged BP can't be dropped from the comparison just
-  // because a lab value had a larger raw deviation score. Safe to
-  // reorder here because selectPriorityVitals() has already filtered
-  // the pool down to vitals present in BOTH reports — the boost only
-  // reorders within that valid pool, it never adds anything unmatched.
+  // Vital selection now matches Vitals Overview / SidebarVitals exactly:
+  // it is based on the current report's own priority ranking (critical →
+  // observational → normal), NOT on whether the same vital also exists
+  // in the previous report. A vital only present in the current report
+  // still gets a row here, with "-" standing in for the columns that
+  // require a comparison value.
   const currentMeasurements = currentReport?.measurements || [];
   const previousMeasurements = previousReport?.measurements || [];
   const { selected, overflowCount } = selectPriorityVitalsWithVitalSignBoost(
     currentMeasurements,
-    previousMeasurements,
+    null,
     6
   );
 
@@ -2569,11 +2568,32 @@ function buildMeasurementComparisonRows(currentReport, previousReport) {
 
   for (const current of selected) {
     const previous = previousByKey.get(current.key);
-    if (!previous) continue; // safety — selector already filters this
+
+    if (!previous) {
+      // No comparison value available for this vital — show it with "-"
+      // placeholders rather than dropping it from the table.
+      rows.push({
+        param: current.name,
+        prev: "-",
+        cur: current.display_value,
+        change: "-",
+        status: "-",
+      });
+      continue;
+    }
 
     const currentValue = Number(current.value);
     const previousValue = Number(previous.value);
-    if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue)) continue;
+    if (!Number.isFinite(currentValue) || !Number.isFinite(previousValue)) {
+      rows.push({
+        param: current.name,
+        prev: "-",
+        cur: current.display_value,
+        change: "-",
+        status: "-",
+      });
+      continue;
+    }
 
     const delta = currentValue - previousValue;
     const currentDeviation = current.deviation_score == null ? null : Number(current.deviation_score);
@@ -2631,6 +2651,11 @@ function ComparisonTable({ L, P, isLatestSelected }) {
   const { rows: vitalRows, overflowCount } = buildMeasurementComparisonRows(rightReport, leftReport);
   rows.push(...vitalRows);
 
+  // True only when every vital row had no comparison value (all "-"),
+  // meaning we're effectively just listing current vitals with no
+  // actual comparison data available.
+  const usingFallbackVitals = vitalRows.length > 0 && vitalRows.every((r) => r.status === "-");
+
   // Cap at 7 total rows (1 Overall Severity + 6 priority vitals) — LOCKED
   const cappedRows = rows.slice(0, 7);
   const hasVitalRows = cappedRows.length > 1;
@@ -2648,6 +2673,10 @@ function ComparisonTable({ L, P, isLatestSelected }) {
     }
     if (status === "Worsened") {
       return { bg: "rgba(239,68,68,0.15)", c: "#ef4444" };
+    }
+    if (status === "-") {
+      // No comparison report available for this vital — neutral/muted
+      return { bg: "rgba(148,163,184,0.18)", c: "#475569" };
     }
     // Stable / neutral — muted style matching Report History neutral pills
     return { bg: "rgba(37,99,255,0.15)", c: "#2563ff" };
@@ -2712,7 +2741,9 @@ function ComparisonTable({ L, P, isLatestSelected }) {
       )}
 
       <div className="dashv2-comparison-caption">
-        {isLatestSelected
+        {usingFallbackVitals
+          ? "No comparison vitals available — showing current report vitals only."
+          : isLatestSelected
           ? "Current report compared with the immediately previous report."
           : "Selected report compared with the latest report."}
       </div>
