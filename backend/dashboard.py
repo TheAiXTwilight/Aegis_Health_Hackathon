@@ -34,7 +34,7 @@ from backend.baseline import baseline_summary
 from tools.biomarker_knowledge import resolve_canonical_key, get_display_name, resolve_advice
 from tools.lab_thresholds import REFERENCE_RANGES, CANONICAL_UNITS
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 
 
 def _now_iso() -> str:

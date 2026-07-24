@@ -355,7 +355,7 @@ export async function getHealth() {
  * GET /dashboard — return the authenticated user's dashboard summary.
  */
 export async function getDashboard() {
-  const resp = await fetchWithAuth(url('dashboard'));
+  const resp = await fetchWithAuth(url('/api/dashboard'));
   if (!resp.ok) throw new Error(`Dashboard fetch failed: HTTP ${resp.status}`);
   return resp.json();
 }

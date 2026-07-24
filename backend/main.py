@@ -65,6 +65,7 @@ from typing import Any
 import aiofiles
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 from agents.pipeline import AegisPipeline
@@ -120,6 +121,8 @@ from tools import tts_synthesizer
 
 UPLOAD_ROOT = Path("/tmp/aegis_uploads")
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+# backend/main.py -> backend/ -> repo root -> frontend/dist
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 register_report_state_remover(remove_completed_job)
 
 # Streaming chunk size for upload writes.
@@ -811,3 +814,33 @@ app.include_router(tts_router)
 
 from backend.security import install_security
 install_security(app)
+
+# ── Frontend static file serving ──────────────────────────────────
+if FRONTEND_DIST.is_dir():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=FRONTEND_DIST / "assets"),
+        name="frontend-assets",
+    )
+
+    _API_PREFIXES = (
+        "queue", "auth", "health", "stream", "pdf", "export",
+        "account", "admin", "vitals", "chat", "api",
+        "records", "tts", "docs", "openapi.json", "redoc",
+    )
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str) -> FileResponse:
+        if full_path.split("/", 1)[0] in _API_PREFIXES:
+            raise HTTPException(status_code=404, detail="Not found")
+
+        candidate = FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+
+        return FileResponse(FRONTEND_DIST / "index.html")
+else:
+    logger.warning(
+        "Frontend dist not found — skipping static file mount",
+        expected_path=str(FRONTEND_DIST),
+    )
