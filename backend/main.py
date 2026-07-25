@@ -118,6 +118,7 @@ from backend.tts import router as tts_router
 # do NOT preload the voice at server startup — that would waste ~180MB
 # on servers where nobody clicks Voice TTS.
 from tools import tts_synthesizer
+from backend.ollama_manager import start_ollama, stop_ollama
 
 UPLOAD_ROOT = Path("/tmp/aegis_uploads")
 UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
@@ -307,6 +308,11 @@ async def lifespan(app: FastAPI):
     ~180MB free on servers where nobody clicks Voice TTS.
     """
     logger.info("Starting Aegis Health", db_url=settings.AEGIS_DB_URL, seed_demo=settings.AEGIS_SEED_DEMO_USERS)
+
+    # Ensure Ollama is running before anything that might call it.
+    # No more separate `ollama serve` terminal required.
+    await start_ollama()
+
     init_db()
     if settings.AEGIS_SEED_DEMO_USERS:
         from app.db.session import SessionLocal
@@ -337,6 +343,9 @@ async def lifespan(app: FastAPI):
         with contextlib.suppress(asyncio.CancelledError):
             await tts_monitor_task
         logger.info("TTS idle-eviction monitor stopped")
+
+        # Only stops Ollama if this process is the one that started it.
+        await stop_ollama()
 
 
 # ── App ──────────────────────────────────────────────────────────
