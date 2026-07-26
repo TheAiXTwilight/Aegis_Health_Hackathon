@@ -49,9 +49,9 @@ from tools.tool_names import TOOL_EXECUTION_PLANNER
 
 # ── Ollama configuration ──────────────────────────────────────────
 
-OLLAMA_BASE_URL   = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_BASE_URL   = os.getenv("AEGIS_OLLAMA_BASE_URL", "http://172.17.0.1:11434")
 OLLAMA_STREAM_URL = OLLAMA_BASE_URL + "/api/generate"
-MODEL_TAG         = "aegis-llama"
+MODEL_TAG         = os.getenv("AEGIS_OLLAMA_MODEL", "llama3.2:1b")
 
 _SYMPTOM_PREVIEW_CHARS = 200
 _NUM_PREDICT           = 128

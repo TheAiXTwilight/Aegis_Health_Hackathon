@@ -56,8 +56,8 @@ from backend.queue import (
 
 router = APIRouter()
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-_MODEL_TAG      = "aegis-llama"
+OLLAMA_BASE_URL = os.getenv("AEGIS_OLLAMA_BASE_URL", "http://172.17.0.1:11434")
+_MODEL_TAG      = os.getenv("AEGIS_OLLAMA_MODEL", "llama3.2:1b")
 _PROBE_TTL_S    = 60.0
 
 

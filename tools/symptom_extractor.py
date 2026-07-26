@@ -114,9 +114,9 @@ from tools.tool_names import TOOL_SYMPTOM_EXTRACTOR
 
 # ── Ollama configuration ──────────────────────────────────────────
 
-OLLAMA_BASE_URL   = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_BASE_URL   = os.getenv("AEGIS_OLLAMA_BASE_URL", "http://172.17.0.1:11434")
 OLLAMA_STREAM_URL = OLLAMA_BASE_URL + "/api/generate"
-MODEL_TAG         = "aegis-llama"
+MODEL_TAG         = os.getenv("AEGIS_OLLAMA_MODEL", "llama3.2:1b")
 
 _NUM_PREDICT    = 256   # symptom extraction is small — 256 tokens is enough
 _NUM_CTX        = 4096

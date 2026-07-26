@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import async_timeout
 import json
 import time
 from collections import deque
@@ -548,12 +549,15 @@ async def _execute_job(job: PipelineJob, pipeline: PipelineRunner) -> None:
     # internally. We do NOT await this — it must not block or slow
     # down the actual report pipeline. Import inside the function so
     # a Piper install failure never breaks the queue module.
-    try:
-        from tools import tts_synthesizer
-        asyncio.create_task(asyncio.to_thread(tts_synthesizer.warmup))
-    except Exception:
-        # Never let a warmup scheduling problem fail the job itself.
-        logger.debug("queue · could not schedule TTS warmup (non-fatal)")
+    # DISABLED on Jetson board: auto-warmup at report-start competes for
+    # memory with the LLM pipeline on this shared, memory-constrained
+    # device and was correlated with backend OOM kills after report
+    # generation. TTS still loads lazily on first actual /tts request.
+    # try:
+    #     from tools import tts_synthesizer
+    #     asyncio.create_task(asyncio.to_thread(tts_synthesizer.warmup))
+    # except Exception:
+    #     logger.debug("queue · could not schedule TTS warmup (non-fatal)")
 
     try:
         if job.session_id not in _session_states:
@@ -601,7 +605,7 @@ async def _execute_job(job: PipelineJob, pipeline: PipelineRunner) -> None:
                 pass
             return
 
-        async with asyncio.timeout(PIPELINE_TIMEOUT_S):
+        async with async_timeout.timeout(PIPELINE_TIMEOUT_S):
             async for token in pipeline.run(state):
                 # _save_checkpoint() does synchronous disk I/O
                 # (serializes the full pipeline state to JSON and
@@ -642,22 +646,21 @@ async def _execute_job(job: PipelineJob, pipeline: PipelineRunner) -> None:
         job.status       = JobStatus.COMPLETED
         job.completed_at = datetime.now(timezone.utc)
 
-        # Start voice synthesis now, in the background, so it runs in
-        # parallel with the user reading the report instead of only
-        # starting when/if they click "Voice TTS". This schedules the
-        # work and returns immediately — it does not block job
-        # completion, and Piper itself runs in a worker thread (see
-        # backend/tts_cache.py), so it does not stall the event loop.
-        if state.report is not None and getattr(state.report, "text", None):
-            try:
-                from backend.tts_cache import start_background_synthesis
-                start_background_synthesis(job.job_id, state.report.text)
-            except Exception:
-                # Never let a TTS scheduling problem fail the job itself.
-                logger.warning(
-                    "queue · failed to schedule background TTS synthesis",
-                    job_id=job.job_id,
-                )
+        # DISABLED on Jetson board: auto-synthesizing full report audio
+        # immediately on every report completion runs Piper (CPU-bound)
+        # at the exact moment memory/CPU is already under pressure from
+        # the LLM pipeline, causing crashes and dashboard 502s on this
+        # shared, memory-constrained device. TTS now only runs when the
+        # user explicitly clicks "Voice TTS" (POST /tts/speak).
+        # if state.report is not None and getattr(state.report, "text", None):
+        #     try:
+        #         from backend.tts_cache import start_background_synthesis
+        #         start_background_synthesis(job.job_id, state.report.text)
+        #     except Exception:
+        #         logger.warning(
+        #             "queue · failed to schedule background TTS synthesis",
+        #             job_id=job.job_id,
+        #         )
 
         if job.started_at is not None:
             duration = (job.completed_at - job.started_at).total_seconds()

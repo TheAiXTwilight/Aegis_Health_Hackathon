@@ -76,7 +76,7 @@ class ModelRegistry:
 
     def __init__(self, memory_floor_mb: int = 900) -> None:
         self.memory_floor_mb: int = memory_floor_mb
-        self._ollama_model: str = "aegis-llama"
+        self._ollama_model: str = settings.AEGIS_OLLAMA_MODEL
         self._ollama_url: str = settings.AEGIS_OLLAMA_BASE_URL.rstrip("/")
         self._prewarmed: bool = False
         self._active_lock: asyncio.Lock = asyncio.Lock()

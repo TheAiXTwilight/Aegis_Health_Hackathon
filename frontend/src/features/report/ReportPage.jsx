@@ -193,9 +193,13 @@ const TOOL_GROUPS = {
 function getStepStatus(toolsRun, toolsFailed, currentTool, toolKeys, optionalFailedTools = [], jobStatus = "queued") {
   const anyRunning = toolKeys.some((t) => currentTool === t);
   const anyAttempted = toolKeys.some((t) => toolsRun.includes(t) || toolsFailed.includes(t) || currentTool === t);
-  const failedRequiredTools = toolKeys.filter((t) => toolsFailed.includes(t) && !optionalFailedTools.includes(t));
+  const failedRequiredTools = toolKeys.filter(
+    (t) => toolsFailed.includes(t) && !toolsRun.includes(t) && !optionalFailedTools.includes(t)
+  );
   const anyFailedRequired = failedRequiredTools.length > 0;
-  const anyOptionalFailed = toolKeys.some((t) => toolsFailed.includes(t) && optionalFailedTools.includes(t));
+  const anyOptionalFailed = toolKeys.some(
+    (t) => toolsFailed.includes(t) && !toolsRun.includes(t) && optionalFailedTools.includes(t)
+  );
 
   const jobFinished = jobStatus === "completed" || jobStatus === "failed";
   const relevantTools = jobFinished
@@ -215,7 +219,9 @@ function getStepStatus(toolsRun, toolsFailed, currentTool, toolKeys, optionalFai
 
 function shouldShowStep(toolKeys, toolsRun, toolsFailed, currentTool, optionalFailedTools = []) {
   if (toolKeys.includes("ExecutionPlanner") && !toolKeys.includes("VoiceTranscriber")) return true;
-  const visibleFailedTools = toolKeys.filter((t) => toolsFailed.includes(t) && !optionalFailedTools.includes(t));
+  const visibleFailedTools = toolKeys.filter(
+    (t) => toolsFailed.includes(t) && !toolsRun.includes(t) && !optionalFailedTools.includes(t)
+  );
   return toolKeys.some((t) => toolsRun.includes(t) || currentTool === t) || visibleFailedTools.length > 0;
 }
 
