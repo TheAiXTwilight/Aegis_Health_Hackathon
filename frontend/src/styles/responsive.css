@@ -3794,3 +3794,176 @@
     font-size: clamp(11.5px, 0.75vw, 13px) !important;
   }
 }
+
+/* ==========================================================
+   DASHBOARD — SINGLE-REPORT QUICK SIGNALS FLOW FIX
+
+   This block intentionally comes last.  Earlier responsive rules use
+   equal-height Quick Signals sections, and some of them clip the top
+   section.  At laptop widths, keep each section content-sized so a
+   second row of symptom tags expands DOWNWARD: Confidence/Trend and
+   Last Updated move below it rather than Reported Symptoms moving up
+   under the card title.  The card body scrolls only for exceptional
+   3+ row tag lists.
+   ========================================================== */
+@media (max-width: 1919px) {
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    > .dashv2-card-header {
+    flex: 0 0 auto !important;
+    margin-bottom: clamp(5px, 0.365vw, 7px) !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    > .dashv2-quicksig-body {
+    display: flex !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    align-content: flex-start !important;
+    min-height: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(37, 99, 255, 0.28) transparent;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-top,
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-mid,
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-bottom {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    min-height: 0 !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-top {
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 0 clamp(6px, 0.42vw, 8px) !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-mid {
+    padding: clamp(6px, 0.42vw, 8px) 0 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-bottom {
+    margin-top: 0 !important;
+    padding: clamp(6px, 0.42vw, 8px) 0 0 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.25) !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-label {
+    display: block !important;
+    margin-bottom: clamp(3px, 0.26vw, 5px) !important;
+  }
+
+  /* These declarations must be important because the component applies
+     marginTop, rowGap, columnGap, font size, and padding inline. */
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-symptom-tags {
+    flex: 0 0 auto !important;
+    margin-top: clamp(4px, 0.313vw, 6px) !important;
+    row-gap: clamp(4px, 0.313vw, 6px) !important;
+    column-gap: clamp(6px, 0.417vw, 8px) !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-symptom-tags > span {
+    padding: clamp(2px, 0.156vw, 3px) clamp(6px, 0.417vw, 8px) !important;
+    line-height: 1.25 !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    > .dashv2-quicksig-body::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    > .dashv2-quicksig-body::-webkit-scrollbar-thumb {
+    background: rgba(37, 99, 255, 0.28);
+    border-radius: 999px;
+  }
+}
+
+/* ==========================================================
+   SINGLE-REPORT QUICK SIGNALS — LOWER SECTION SPACING
+   Keep the responsive symptom-flow correction, while restoring the
+   original, generously spaced Confidence/Trend and Last Updated areas.
+   ========================================================== */
+@media (max-width: 1919px) {
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    > .dashv2-card-header {
+    /* Deliberately only one pixel more than the prior final override. */
+    margin-bottom: clamp(11px, 0.875vw, 14px) !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-mid,
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-bottom {
+    flex: 1 1 0 !important;
+    justify-content: center !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-mid {
+    padding: clamp(9px, 0.625vw, 12px) 0 !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-section-bottom {
+    padding: clamp(9px, 0.625vw, 12px) 0 0 !important;
+  }
+
+  .dashv2-stage:has(> .dashv2-vitals-row-card)
+    > .dashv2-vitals-row-card
+    > .dashv2-quicksig-card
+    .dashv2-quicksig-label {
+    font-size: clamp(11px, 0.75vw, 13px) !important;
+  }
+}

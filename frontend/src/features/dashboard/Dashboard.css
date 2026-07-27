@@ -2904,3 +2904,181 @@
   align-self: stretch;
   padding-top: 0;
 }
+/* ═══════════════════════════════════════════════════════════════════
+   SINGLE-REPORT QUICK SIGNALS — NATURAL TAG FLOW (FINAL OVERRIDE)
+
+   Keep the Reported Symptoms heading pinned immediately below the card
+   title.  Wrapped symptom tags grow downward in normal document order;
+   they no longer share three equal-height sections or get vertically
+   centred/cropped.  Confidence, Trend, and Last Updated follow below
+   the tags.  The body becomes scrollable only if an unusually long
+   tag list cannot fit inside the fixed dashboard row.
+   ═══════════════════════════════════════════════════════════════════ */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  > .dashv2-card-header {
+  flex: 0 0 auto;
+  margin-bottom: 6px !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  > .dashv2-quicksig-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-content: flex-start;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 255, 0.28) transparent;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  > .dashv2-quicksig-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  > .dashv2-quicksig-body::-webkit-scrollbar-thumb {
+  background: rgba(37, 99, 255, 0.28);
+  border-radius: 999px;
+}
+
+/* All three blocks use intrinsic height.  This is intentional: when
+   another line of tags appears, the following blocks are pushed down
+   instead of the symptoms block being centred upward and clipped. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-top,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-mid,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-bottom {
+  display: flex;
+  flex: 0 0 auto !important;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-top {
+  max-height: none !important;
+  overflow: visible !important;
+  padding: 0 0 8px !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-mid {
+  padding: 8px 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-bottom {
+  margin-top: 0 !important;
+  padding: 8px 0 0 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* The tag wrapper has inline spacing in DashboardPage.  Override it
+   here so a two-line tag group comfortably fits in the normal card. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-label {
+  display: block;
+  margin-bottom: 4px !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-symptom-tags {
+  flex: 0 0 auto;
+  margin-top: 6px !important;
+  row-gap: 6px !important;
+  column-gap: 8px !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-symptom-tags > span {
+  padding: 3px 8px !important;
+  line-height: 1.25 !important;
+}
+
+/* ── Single-report Quick Signals: restore lower-section breathing room ──
+   The symptoms block remains intrinsic so its title/tags never move up
+   or crop.  Only the two lower blocks reclaim the remaining height and
+   centre their original content again. */
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  > .dashv2-card-header {
+  /* One extra pixel of separation from Reported Symptoms. */
+  margin-bottom: 14px !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-mid,
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-bottom {
+  flex: 1 1 0 !important;
+  justify-content: center !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-mid {
+  padding: 12px 0 !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-section-bottom {
+  padding: 12px 0 0 !important;
+}
+
+.dashv2-stage:has(> .dashv2-vitals-row-card)
+  > .dashv2-vitals-row-card
+  > .dashv2-quicksig-card
+  .dashv2-quicksig-label {
+  font-size: 13px !important;
+}
