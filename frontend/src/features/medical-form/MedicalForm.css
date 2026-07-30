@@ -38,11 +38,13 @@
   font-size: 38px;
   font-weight: 800;
   margin-bottom: 35px;
+  flex-shrink: 0; /* heading must never be squeezed by the flex column */
 }
 
 /* ── Accordion ──────────────────────────────────────────────────── */
 .accordion-wrapper {
   width: 100%;
+  flex-shrink: 0; /* keep sections intact; card scrolls if space is truly short */
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -152,7 +154,27 @@
   font-weight: 700;
 }
 
-.margin-bottom-20 { margin-bottom: 20px; }
+.margin-bottom-20 { margin-bottom: 14px; }
+
+/*
+  Compact row spacing — !important so it beats any stale inline
+  marginTop baked into an older JS bundle.
+*/
+.accordion-content .form-grid:not(:first-child),
+.accordion-content .input-group:not(:first-child) {
+  margin-top: 8px !important;
+}
+
+/* X-Ray section: a little breathing room around the findings
+   checklist and Radiologist Notes. */
+.accordion-content .xray-findings-section:not(:first-child) {
+  margin-top: 18px !important;
+}
+
+.xray-findings-section + .input-group {
+  margin-top: 22px !important;
+  gap: 12px !important;
+}
 
 .input-with-icon {
   position: relative;
@@ -205,6 +227,29 @@
 .glass-textarea:focus {
   background: rgba(255, 255, 255, 0.2);
   border-color: #2563ff;
+}
+
+/* ── Keep placeholder on ONE line ─────────────────────────────────
+   Safari/WebKit wraps long textarea placeholders even when they
+   fit. Forcing nowrap on the ::placeholder pseudo-element keeps
+   the hint on a single line; it clips gracefully (…) only if the
+   window is far too narrow to ever show it. Chrome/Firefox honour
+   the same rule, so all browsers now match. */
+.glass-textarea::placeholder,
+.medical-history-auto-textarea::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Same rule with the legacy -webkit- prefix (must stay a separate
+   selector list — an unknown pseudo-element invalidates the whole
+   selector in browsers that don't recognise it). */
+.glass-textarea::-webkit-input-placeholder,
+.medical-history-auto-textarea::-webkit-input-placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Radio buttons ──────────────────────────────────────────────── */
@@ -309,8 +354,10 @@
 
 /* ── Submit button ──────────────────────────────────────────────── */
 .form-submit-btn {
+  flex: 0 0 auto; /* never shrink — fixes the button getting squeezed */
   width: 240px;
   height: 56px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -352,6 +399,7 @@
   height: 46px !important;
   max-height: 220px;
   overflow-y: hidden;
+  overflow-x: hidden;
   resize: none;
   padding-right: 54px;
   line-height: 1.5;
@@ -475,24 +523,34 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── X-ray findings checklist chips ────────────────────────────── */
+/* ── X-ray findings label + checklist chips ────────────────────── */
+/* The X-Ray Findings label previously inherited the large 18px
+   root font. Pin it to the same size/weight as .input-group labels
+   so it matches in every browser. */
+.xray-findings-section > label {
+  display: block;
+  color: #0d2167;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .findings-checklist {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .finding-chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  padding: 7px 12px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.25);
   border-radius: 100px;
   color: #425894;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;

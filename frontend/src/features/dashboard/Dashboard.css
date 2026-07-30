@@ -1705,7 +1705,10 @@
   bottom: 0;
   width: calc(20% - 6.4px);
   z-index: 50;
-  animation: dashv2-slide-in 0.25s ease-out;
+}
+
+.dashv2-chat-panel-enter {
+  animation: dashv2-slide-in 0.30s ease-out;
 }
 
 @keyframes dashv2-slide-in {

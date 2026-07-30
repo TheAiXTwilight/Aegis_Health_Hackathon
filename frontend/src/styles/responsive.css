@@ -185,45 +185,66 @@
   width: clamp(650px, 46.875vw, 900px);
 
   padding:
-    clamp(33px, 2.344vw, 45px)
+    clamp(30px, 2.344vw, 45px)
     clamp(36px, 2.604vw, 50px);
 
   border-radius: clamp(30px, 2.083vw, 40px);
 
   /*
-    Prevents the form from extending behind the footer on a
-    shorter laptop viewport. Scroll appears only if necessary.
+    NO internal scrolling: the card grows to fit its content.
+    Combined with the compact spacing overrides below, the fully
+    opened form fits inside one laptop viewport without any
+    scrollbar appearing inside the card.
   */
-  max-height: calc(
-    100dvh - var(--form-top-space) - var(--form-bottom-space) - 16px
-  );
-
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(37, 99, 255, 0.3) transparent;
+  max-height: none;
+  overflow: visible;
 }
 
 .medical-form-card::-webkit-scrollbar {
-  width: 5px;
+  display: none;
 }
 
-.medical-form-card::-webkit-scrollbar-thumb {
-  background: rgba(37, 99, 255, 0.28);
-  border-radius: 999px;
+/*
+  Compact row spacing — uses !important so it also wins over any
+  stale inline marginTop baked into an older JS bundle.
+*/
+.medical-form-card .accordion-content .form-grid:not(:first-child),
+.medical-form-card .accordion-content .input-group:not(:first-child) {
+  margin-top: 4px !important;
+}
+
+/*
+  X-Ray section gets a little more breathing room than the compact
+  Medical Information rows: gap above the findings block and above
+  Radiologist Notes.
+*/
+.medical-form-card .accordion-content .xray-findings-section:not(:first-child) {
+  margin-top: 16px !important;
+}
+
+.medical-form-card .xray-findings-section + .input-group {
+  margin-top: 20px !important;
+  gap: 10px !important;
+}
+
+.medical-form-card .accordion-content .margin-bottom-20 {
+  margin-bottom: clamp(6px, 0.521vw, 14px) !important;
 }
 
 
 /* Form heading */
 .medical-form-card h2 {
   font-size: clamp(29px, 1.979vw, 38px);
-  margin-bottom: clamp(27px, 1.823vw, 35px);
+  margin-bottom: clamp(24px, 1.823vw, 35px);
+  flex-shrink: 0;
 }
 
 
 /* Accordion layout */
 .medical-form-card .accordion-wrapper {
   gap: clamp(12px, 0.833vw, 16px);
-  margin-bottom: clamp(27px, 1.823vw, 35px);
+  margin-bottom: clamp(24px, 1.823vw, 35px);
+  flex-shrink: 0;
 }
 
 .medical-form-card .accordion-section {
@@ -266,7 +287,7 @@
   padding:
     clamp(8px, 0.521vw, 10px)
     clamp(18px, 1.25vw, 24px)
-    clamp(21px, 1.458vw, 28px);
+    clamp(12px, 1.146vw, 22px);
 }
 
 
@@ -284,7 +305,7 @@
 }
 
 .medical-form-card .margin-bottom-20 {
-  margin-bottom: clamp(15px, 1.042vw, 20px);
+  margin-bottom: clamp(6px, 0.521vw, 14px);
 }
 
 
@@ -374,12 +395,47 @@
 
 /* Submit button */
 .medical-form-card .form-submit-btn {
+  /*
+    flex: 0 0 auto stops the flex column from squeezing the button
+    when the card's max-height is reached — the button always keeps
+    its intended size, in every browser.
+  */
+  flex: 0 0 auto;
+
   width: clamp(184px, 12.5vw, 240px);
   height: clamp(43px, 2.917vw, 56px);
+  min-height: clamp(43px, 2.917vw, 56px);
   gap: clamp(7px, 0.521vw, 10px);
 
   border-radius: clamp(14px, 0.938vw, 18px);
   font-size: clamp(13px, 0.885vw, 17px);
+}
+
+/*
+  X-Ray Findings label — was unstyled, so it inherited the large
+  root font (up to 18px) and looked oversized next to the 13px
+  field labels / chips. Matches .input-group label exactly.
+*/
+.medical-form-card .xray-findings-section > label {
+  display: block;
+  color: #0d2167;
+  font-size: clamp(10px, 0.677vw, 13px);
+  font-weight: 700;
+}
+
+/* Compact X-Ray Findings chips — scales with the viewport like the
+   rest of the form, and keeps the rating text small in every browser. */
+.medical-form-card .findings-checklist {
+  gap: clamp(9px, 0.625vw, 11px);
+  margin-top: clamp(10px, 0.625vw, 12px);
+}
+
+.medical-form-card .finding-chip {
+  gap: clamp(4px, 0.313vw, 6px);
+  padding:
+    clamp(5px, 0.365vw, 7px)
+    clamp(9px, 0.625vw, 12px);
+  font-size: clamp(10px, 0.625vw, 12px);
 }
 
 /* ==========================================================
