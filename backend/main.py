@@ -52,6 +52,11 @@ import os
 # of which entrypoint (uvicorn CLI, gunicorn, tests, a script) starts
 # the process, rather than relying on it being set in the shell.
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+os.environ.setdefault("OMP_NUM_THREADS", "2")
+os.environ.setdefault("ORT_INTRA_OP_NUM_THREADS", "2")
+os.environ.setdefault("ORT_INTER_OP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "2")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "2")
 
 import asyncio
 import contextlib
@@ -339,6 +344,7 @@ async def lifespan(app: FastAPI):
     # Start the TTS idle-eviction monitor. Runs for the app lifetime,
     # cancelled cleanly in the finally block below.
     tts_monitor_task = asyncio.create_task(_tts_idle_monitor())
+    tts_prewarm_task = asyncio.create_task(asyncio.to_thread(tts_synthesizer.warmup))
 
     try:
         yield
@@ -352,6 +358,10 @@ async def lifespan(app: FastAPI):
         with contextlib.suppress(asyncio.CancelledError):
             await tts_monitor_task
         logger.info("TTS idle-eviction monitor stopped")
+
+        # Kill the Piper worker so it doesn't leak as an orphan after shutdown.
+        with contextlib.suppress(Exception):
+            tts_synthesizer.evict_voice()
 
         # Only stops Ollama if this process is the one that started it.
         await stop_ollama()

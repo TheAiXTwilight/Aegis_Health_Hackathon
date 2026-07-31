@@ -62,6 +62,7 @@ fi
 
 echo "=== 6. Killing any stray processes ==="
 pkill -f uvicorn 2>/dev/null || true
+pkill -f "tools.piper_server" 2>/dev/null || true   # stray Piper TTS worker from a previous run
 pkill -f ngrok 2>/dev/null || true
 sleep 2
 
