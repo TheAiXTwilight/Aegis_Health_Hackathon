@@ -29,6 +29,7 @@ import argparse
 import io
 import json
 import os
+import socket
 import threading
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -224,6 +225,13 @@ class _Handler(BaseHTTPRequestHandler):
             raise TTSError("Text produced no speakable segments.", reason="synthesis_failed")
         sr = voice.config.sample_rate
 
+        # Disable Nagle so small PCM chunks are pushed out immediately instead
+        # of waiting ~200ms for an ACK — keeps time-to-first-audio low.
+        try:
+            self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+        except OSError:
+            pass
+
         self.send_response(200)
         self.send_header("Content-Type", "audio/wav")
         self.send_header("Transfer-Encoding", "chunked")
@@ -234,11 +242,14 @@ class _Handler(BaseHTTPRequestHandler):
 
         try:
             chunk(_make_wav_header(sr))
+            self.wfile.flush()  # push the WAV header now so playback can init
             with _SYNTH_LOCK:
                 for pcm, _sr in _iter_segment_audio(segments, voice):
                     if pcm.size > 0:
                         chunk(pcm.tobytes())
+                        self.wfile.flush()  # stream each segment as soon as it's ready
             self.wfile.write(b"0\r\n\r\n")
+            self.wfile.flush()
         except Exception:
             logger.exception("piper_server · stream error")
             try:
