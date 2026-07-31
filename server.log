@@ -1,0 +1,46 @@
+2026-07-31 16:43:37.295 | INFO     | tools.severity_scorer:_synthesize_text_finding_rules:408 - severity_scorer · synthesized text-finding rules
+INFO:     Started server process [872]
+INFO:     Waiting for application startup.
+2026-07-31 16:43:45.816 | INFO     | backend.main:lifespan:317 - Starting Aegis Health
+2026-07-31 16:43:45.960 | INFO     | backend.ollama_manager:start_ollama:72 - Ollama already reachable at http://172.17.0.1:11434 — not spawning a new instance
+2026-07-31 16:43:45.976 | INFO     | backend.main:lifespan:337 - Inference worker started
+2026-07-31 16:43:45.978 | DEBUG    | backend.model_registry:assert_memory_headroom:104 - Memory headroom OK
+2026-07-31 16:43:46.058 | INFO     | backend.main:_tts_idle_monitor:270 - TTS idle-eviction monitor started
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2026-07-31 16:43:53.463 | INFO     | tools.medical_rag_search:_get_chroma_collection:385 - medical_rag_search · ChromaDB collection loaded
+INFO:     127.0.0.1:48592 - "GET /health HTTP/1.1" 200 OK
+2026-07-31 16:43:53.476 | INFO     | backend.model_registry:_ollama_prewarm_locked:196 - Ollama prewarmed
+[0;93m2026-07-31 16:43:53.538665506 [W:onnxruntime:Default, device_discovery.cc:164 DiscoverDevicesForPlatform] GPU device discovery failed: device_discovery.cc:89 ReadFileContents Failed to open file: "/sys/class/drm/card1/device/vendor"[m
+2026-07-31 16:43:54.018 | INFO     | tools.medical_rag_search:_get_onnx_session:254 - medical_rag_search · ONNX session loaded
+2026-07-31 16:43:54.138 | INFO     | backend.model_registry:prewarm:160 - Prewarm complete
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET / HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /assets/index-ByPsyN78.js HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /assets/index-Zdyn6wSy.css HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /heart.png HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     103.149.126.104:0 - "POST /auth/refresh HTTP/1.1" 401 Unauthorized
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.149.126.104:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
+INFO:     103.186.133.147:0 - "GET /health HTTP/1.1" 200 OK
