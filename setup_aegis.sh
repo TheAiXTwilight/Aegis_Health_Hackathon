@@ -70,7 +70,7 @@ if curl -sf http://127.0.0.1:8000/health > /dev/null; then
     echo "Backend healthy."
 else
     echo "ERROR: Backend failed to start. Last 30 log lines:"
-    tail -30 server.log
+    cat -30 server.log
     exit 1
 fi
 
