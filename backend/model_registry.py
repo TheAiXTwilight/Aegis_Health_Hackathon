@@ -25,6 +25,7 @@ import httpx
 from loguru import logger
 
 from app.settings import settings
+from backend.queue import _inference_lock
 
 
 # ── Memory helpers ──────────────────────────────────────────────
@@ -164,7 +165,17 @@ class ModelRegistry:
         Send a minimal generate request to Ollama so the model
         is loaded into GPU/RAM before the first user request.
         Uses num_predict=1 to minimise token generation time.
+
+        Acquires the same _inference_lock used by the report pipeline
+        so this never runs concurrently with an actual job (or with
+        itself) — on constrained shared hardware, concurrent hits to
+        Ollama's /api/generate have been observed to crash its runner
+        process ("llama runner process has terminated").
         """
+        async with _inference_lock:
+            return await self._ollama_prewarm_locked()
+
+    async def _ollama_prewarm_locked(self) -> bool:
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.post(

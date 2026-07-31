@@ -22,11 +22,11 @@ cd ~/Aegis_Health
 
 echo "=== 3. Verifying TTS auto-trigger patches ==="
 PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue.py || true)
-if [ "$PATCH_COUNT" != "3" ]; then
-    echo "Patches missing or incomplete ($PATCH_COUNT/3) — pulling latest from GitHub."
+if [ "$PATCH_COUNT" != "2" ]; then
+    echo "Patches missing or incomplete ($PATCH_COUNT/2) — pulling latest from GitHub."
     git pull origin main || echo "git pull failed (uncommitted local changes?) — continuing anyway."
     PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue.py || true)
-    echo "Patch count after pull: $PATCH_COUNT/3"
+    echo "Patch count after pull: $PATCH_COUNT/2"
 else
     echo "Both TTS patches confirmed present."
 fi
@@ -65,12 +65,20 @@ sleep 2
 
 echo "=== 7. Starting backend ==="
 python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
-sleep 15
-if curl -sf http://127.0.0.1:8000/health > /dev/null; then
-    echo "Backend healthy."
+echo "Waiting for backend to become healthy (up to 40s)..."
+READY=0
+for i in $(seq 1 20); do
+    if curl -sf http://127.0.0.1:8000/health > /dev/null 2>&1; then
+        READY=1
+        break
+    fi
+    sleep 2
+done
+if [ "$READY" = "1" ]; then
+    echo "Backend healthy after $((i*2))s."
 else
-    echo "ERROR: Backend failed to start. Last 30 log lines:"
-    cat -30 server.log
+    echo "ERROR: Backend did not become healthy within 40s. Last 30 log lines:"
+    tail -30 server.log
     exit 1
 fi
 
@@ -83,9 +91,9 @@ if [ ! -f ngrok ]; then
     chmod +x ngrok
 fi
 nohup ./ngrok http 127.0.0.1:8000 > ngrok.log 2>&1 &
-sleep 10
+sleep 3
 PUBLIC_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*"' | head -1)
 echo ""
 echo "=== DONE ==="
 echo "Public URL: $PUBLIC_URL"
-echo "Test it: curl <url>/health"
+echo "Test it: curl $PUBLIC_URL/health"
