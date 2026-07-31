@@ -318,13 +318,15 @@ async def tts_status(
 
     Returns: {"status": "pending" | "ready" | "failed" | "not_found"}
     """
-    # Fire-and-forget warmup. Runs in a worker thread so the model
-    # load (~500ms cold) does not delay this endpoint's response.
-    # Also touches the activity timestamp even when already loaded,
-    # so the idle monitor doesn't evict while a user is actively
-    # interacting with a report page.
-    tts_synthesizer.touch_activity()
-    asyncio.create_task(asyncio.to_thread(tts_synthesizer.warmup))
+    # DISABLED on Jetson board: this endpoint is polled automatically
+    # by the frontend just from having a report page open, so firing
+    # Piper warmup here means simply viewing a report — not clicking
+    # Voice TTS — was loading/keeping Piper warm in the background,
+    # competing with Ollama/report generation for CPU on this shared,
+    # memory-constrained device. Warmup now only happens via the
+    # actual on-click synthesis path (POST /tts/speak).
+    # tts_synthesizer.touch_activity()
+    # asyncio.create_task(asyncio.to_thread(tts_synthesizer.warmup))
 
     entry = tts_cache.get_cached(job_id)
     if entry is None:
