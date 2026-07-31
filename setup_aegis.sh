@@ -1,7 +1,24 @@
 #!/bin/bash
-# One-shot setup/recovery script for Aegis Health on the EdgeMinds Jetson board.
-# Run this at the start of every fresh session: bash setup_aegis.sh
+# One-shot setup/recovery for Aegis Health on the EdgeMinds Jetson board.
+#
+# The backend now runs inside a DETACHED tmux session ("aegis"), so a dropped
+# Cloud-Lab / SSH session does NOT take the app down — the public URL stays up.
+#
+# Usage:
+#   bash setup_aegis.sh            # start only if not already running
+#   bash setup_aegis.sh --restart  # force-stop + full restart
 set -e
+
+# ── If the app is already healthy, just report and exit (typical after a reconnect).
+#    Pass --restart to force a full stop+start. ──
+if [ "$1" != "--restart" ] && curl -sf http://127.0.0.1:8000/health >/dev/null 2>&1; then
+    PUBLIC_URL=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null | grep -o '"public_url":"[^"]*"' | head -1)
+    echo "Backend already running and healthy — nothing to do."
+    echo "Public URL: $PUBLIC_URL"
+    echo "Reattach console:  tmux attach -t aegis"
+    echo "Force restart:     bash setup_aegis.sh --restart"
+    exit 0
+fi
 
 echo "=== 1. Fixing missing tzdata (common on fresh containers) ==="
 if [ ! -f /usr/share/zoneinfo/tzdata.zi ]; then
@@ -21,11 +38,11 @@ fi
 cd ~/Aegis_Health
 
 echo "=== 3. Verifying TTS auto-trigger patches ==="
-PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue.py || true)
+PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue* || true)
 if [ "$PATCH_COUNT" != "2" ]; then
     echo "Patches missing or incomplete ($PATCH_COUNT/2) — pulling latest from GitHub."
     git pull origin main || echo "git pull failed (uncommitted local changes?) — continuing anyway."
-    PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue.py || true)
+    PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue* || true)
     echo "Patch count after pull: $PATCH_COUNT/2"
 else
     echo "Both TTS patches confirmed present."
@@ -55,30 +72,31 @@ AEGIS_CORS_ORIGINS=["https://scrounger-headstone-entrench.ngrok-free.dev"]
 EOF
     echo ".env created."
 else
-    echo ".env already exists - fixing Ollama URL to host gateway."
+    echo ".env already exists — fixing Ollama URL to host gateway (172.17.0.1:11434)."
     sed -i 's#AEGIS_OLLAMA_BASE_URL=http://localhost:11434#AEGIS_OLLAMA_BASE_URL=http://172.17.0.1:11434#' .env
     sed -i 's#AEGIS_OLLAMA_BASE_URL=http://127.0.0.1:11434#AEGIS_OLLAMA_BASE_URL=http://172.17.0.1:11434#' .env
 fi
 
 echo "=== 6. Killing any stray processes ==="
+tmux kill-session -t aegis 2>/dev/null || true
 pkill -f uvicorn 2>/dev/null || true
 pkill -f "tools.piper_server" 2>/dev/null || true   # stray Piper TTS worker from a previous run
 pkill -f ngrok 2>/dev/null || true
 sleep 2
 
-echo "=== 7. Starting backend ==="
-python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
+echo "=== 7. Starting backend (in tmux — survives SSH disconnects) ==="
+command -v tmux >/dev/null 2>&1 || sudo apt install -y tmux
+tmux new -d -s aegis "cd ~/Aegis_Health && python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1"
 echo "Waiting for backend to become healthy (up to 40s)..."
 READY=0
 for i in $(seq 1 20); do
-    if curl -sf http://127.0.0.1:8000/health > /dev/null 2>&1; then
-        READY=1
-        break
+    if curl -sf http://127.0.0.1:8000/health >/dev/null 2>&1; then
+        READY=1; break
     fi
     sleep 2
 done
 if [ "$READY" = "1" ]; then
-    echo "Backend healthy after $((i*2))s."
+    echo "Backend healthy after $((i*2))s (running in tmux session 'aegis')."
 else
     echo "ERROR: Backend did not become healthy within 40s. Last 30 log lines:"
     tail -30 server.log
@@ -86,17 +104,44 @@ else
 fi
 
 echo "=== 8. Starting ngrok ==="
-cd ~
-if [ ! -f ngrok ]; then
-    echo "ngrok binary not found — downloading."
-    curl -L -o ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz
-    tar -xzf ngrok.tgz
-    chmod +x ngrok
+if pgrep -f "ngrok http" >/dev/null 2>&1; then
+    echo "ngrok already running — reusing existing tunnel."
+else
+    cd ~
+    if [ ! -f ngrok ]; then
+        echo "ngrok binary not found — downloading."
+        curl -L -o ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz
+        tar -xzf ngrok.tgz
+        chmod +x ngrok
+    fi
+    nohup ./ngrok http 127.0.0.1:8000 > ngrok.log 2>&1 &
+    sleep 3
 fi
-nohup ./ngrok http 127.0.0.1:8000 > ngrok.log 2>&1 &
-sleep 3
 PUBLIC_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*"' | head -1)
+
+echo "=== 9. Server-side SSH keepalive (reduces idle disconnects) ==="
+# Makes the Jetson's sshd probe the client every 30s so NAT/firewalls don't
+# drop the idle connection. Idempotent.
+# NOTE: this only helps if the Jetson's sshd is the direct SSH endpoint. If
+# your Cloud Lab proxies SSH through its own gateway, the gateway controls
+# the timeout and you must use client-side keepalives/autossh on your Mac.
+SSHD=/etc/ssh/sshd_config
+if [ -f "$SSHD" ]; then
+    sudo sed -i '/^[#[:space:]]*ClientAliveInterval/d; /^[#[:space:]]*ClientAliveCountMax/d' "$SSHD" 2>/dev/null || true
+    printf 'ClientAliveInterval 30\nClientAliveCountMax 6\n' | sudo tee -a "$SSHD" >/dev/null
+    sudo systemctl reload ssh 2>/dev/null || sudo systemctl reload sshd 2>/dev/null || true
+    echo "sshd keepalive configured (ClientAliveInterval 30, ClientAliveCountMax 6)."
+else
+    echo "No sshd_config found — skipping server-side keepalive."
+fi
+
 echo ""
 echo "=== DONE ==="
 echo "Public URL: $PUBLIC_URL"
 echo "Test it: curl $PUBLIC_URL/health"
+echo ""
+echo "The backend runs in tmux session 'aegis' — it KEEPS RUNNING when your SSH"
+echo "session drops. After a disconnect+reconnect, the app should still be live."
+echo "  Reattach console:  tmux attach -t aegis"
+echo "  View backend logs: tail -f ~/Aegis_Health/server.log"
+echo "  Force full restart: bash setup_aegis.sh --restart"
