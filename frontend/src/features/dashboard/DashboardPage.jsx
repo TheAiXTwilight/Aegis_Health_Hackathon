@@ -2549,17 +2549,19 @@ function SidebarVitals({ vitalObs, currentReport, previousReport, nav }) {
 
 function buildMeasurementComparisonRows(currentReport, previousReport) {
   // Comparison table is layout-locked → only 6 vitals allowed.
-  // Vital selection now matches Vitals Overview / SidebarVitals exactly:
-  // it is based on the current report's own priority ranking (critical →
-  // observational → normal), NOT on whether the same vital also exists
-  // in the previous report. A vital only present in the current report
-  // still gets a row here, with "-" standing in for the columns that
-  // require a comparison value.
+  // Walk-and-fill logic: go through the current report's vitals in
+  // clinical priority order (critical → observational → normal). For
+  // each candidate, check whether it also has a value in the previous
+  // report — if yes, it takes a slot; if no, SKIP it and move on to the
+  // next vital in priority order (do not fall back to "-" placeholders).
+  // This guarantees every row shown has a real previous → current
+  // comparison, and lower-priority vitals fill in for any
+  // higher-priority vital that couldn't be matched.
   const currentMeasurements = currentReport?.measurements || [];
   const previousMeasurements = previousReport?.measurements || [];
   const { selected, overflowCount } = selectPriorityVitalsWithVitalSignBoost(
     currentMeasurements,
-    null,
+    previousMeasurements,
     6
   );
 
@@ -2569,18 +2571,9 @@ function buildMeasurementComparisonRows(currentReport, previousReport) {
   for (const current of selected) {
     const previous = previousByKey.get(current.key);
 
-    if (!previous) {
-      // No comparison value available for this vital — show it with "-"
-      // placeholders rather than dropping it from the table.
-      rows.push({
-        param: current.name,
-        prev: "-",
-        cur: current.display_value,
-        change: "-",
-        status: "-",
-      });
-      continue;
-    }
+    // selected is already filtered to vitals present in both reports,
+    // but guard defensively in case of any data inconsistency.
+    if (!previous) continue;
 
     const currentValue = Number(current.value);
     const previousValue = Number(previous.value);
