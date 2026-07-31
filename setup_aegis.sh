@@ -22,11 +22,11 @@ cd ~/Aegis_Health
 
 echo "=== 3. Verifying TTS auto-trigger patches ==="
 PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue.py || true)
-if [ "$PATCH_COUNT" != "2" ]; then
-    echo "Patches missing or incomplete ($PATCH_COUNT/2) — pulling latest from GitHub."
+if [ "$PATCH_COUNT" != "3" ]; then
+    echo "Patches missing or incomplete ($PATCH_COUNT/3) — pulling latest from GitHub."
     git pull origin main || echo "git pull failed (uncommitted local changes?) — continuing anyway."
     PATCH_COUNT=$(grep -c "DISABLED on Jetson board" backend/queue.py || true)
-    echo "Patch count after pull: $PATCH_COUNT/2"
+    echo "Patch count after pull: $PATCH_COUNT/3"
 else
     echo "Both TTS patches confirmed present."
 fi
