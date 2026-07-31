@@ -177,13 +177,14 @@ class ModelRegistry:
 
     async def _ollama_prewarm_locked(self) -> bool:
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
+            async with httpx.AsyncClient(timeout=180.0) as client:
                 resp = await client.post(
                     f"{self._ollama_url}/api/generate",
                     json={
                         "model": self._ollama_model,
                         "prompt": "health check",
                         "stream": False,
+                        "keep_alive": "30m",
                         "options": {
                             "num_predict": 1,
                             "num_ctx": settings.OLLAMA_NUM_CTX,

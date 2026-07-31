@@ -292,6 +292,13 @@ async def _tts_idle_monitor() -> None:
 
 
 # ── Lifespan ─────────────────────────────────────────────────────
+async def _safe_prewarm(registry):
+    try:
+        await registry.prewarm()
+    except Exception:
+        logger.exception('Startup prewarm failed')
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -325,6 +332,8 @@ async def lifespan(app: FastAPI):
     pipeline = AegisPipeline()
     register_purge_callback(cleanup_session_uploads)
     worker_task = asyncio.create_task(run_inference_worker(pipeline))
+    from backend.model_registry import model_registry
+    prewarm_task = asyncio.create_task(_safe_prewarm(model_registry))
     logger.info("Inference worker started")
 
     # Start the TTS idle-eviction monitor. Runs for the app lifetime,

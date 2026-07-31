@@ -342,7 +342,7 @@ def readyz() -> dict[str, Any]:
     """Readiness endpoint for deployment checks."""
     try:
         from backend.model_registry import model_registry
-        prewarmed = model_registry.is_prewarmed()
+        prewarmed = model_registry.is_prewarmed
     except Exception:
         prewarmed = False
 

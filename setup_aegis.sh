@@ -55,7 +55,9 @@ AEGIS_CORS_ORIGINS=["https://scrounger-headstone-entrench.ngrok-free.dev"]
 EOF
     echo ".env created."
 else
-    echo ".env already exists, leaving as-is."
+    echo ".env already exists - fixing Ollama URL to host gateway."
+    sed -i 's#AEGIS_OLLAMA_BASE_URL=http://localhost:11434#AEGIS_OLLAMA_BASE_URL=http://172.17.0.1:11434#' .env
+    sed -i 's#AEGIS_OLLAMA_BASE_URL=http://127.0.0.1:11434#AEGIS_OLLAMA_BASE_URL=http://172.17.0.1:11434#' .env
 fi
 
 echo "=== 6. Killing any stray processes ==="
