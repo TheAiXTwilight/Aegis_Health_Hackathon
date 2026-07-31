@@ -65,7 +65,7 @@ sleep 2
 
 echo "=== 7. Starting backend ==="
 python3 -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 > server.log 2>&1 &
-sleep 8
+sleep 15
 if curl -sf http://127.0.0.1:8000/health > /dev/null; then
     echo "Backend healthy."
 else
@@ -83,7 +83,7 @@ if [ ! -f ngrok ]; then
     chmod +x ngrok
 fi
 nohup ./ngrok http 127.0.0.1:8000 > ngrok.log 2>&1 &
-sleep 3
+sleep 10
 PUBLIC_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | grep -o '"public_url":"[^"]*"' | head -1)
 echo ""
 echo "=== DONE ==="
