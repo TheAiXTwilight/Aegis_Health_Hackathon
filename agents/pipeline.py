@@ -178,6 +178,12 @@ class AegisPipeline:
 
             await self._run_rule_validator(state)
 
+            # Confidence is computed AFTER rule validation so the
+            # narrative-vs-rules agreement signal is available.
+            # See the confidence module (varies 0.5-0.97, never flat 1.0).
+            if state.report is not None:
+                state.report.confidence = calculate_confidence(state)
+
         finally:
             state.current_tool      = None
             state.pipeline_end_ms   = time.perf_counter() * 1000
@@ -402,11 +408,6 @@ class AegisPipeline:
                 yield token
 
             state.tools_run.append(TOOL_REPORT_GENERATOR)
-
-            # Inject pipeline-level confidence (placeholder 0.0 → real value)
-            confidence = calculate_confidence(state)
-            if state.report is not None:
-                state.report.confidence = confidence
 
             # Write execution plan summary now that state.report exists
             if state.report is not None and state.execution_plan is not None:

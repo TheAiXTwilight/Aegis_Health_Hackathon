@@ -14,7 +14,7 @@ from app.auth import get_current_user
 from app.db.models import AuditLog, HealthRecord, PipelineJobRow, User
 from app.db.session import get_db
 from app.settings import settings
-from backend.dashboard import build_report_measurement_groups
+from backend.dashboard import build_report_measurement_groups, _utc_iso
 
 router = APIRouter(tags=["records"])
 
@@ -53,7 +53,7 @@ def _record_payload(record: HealthRecord) -> dict[str, Any]:
         "confidence": record.confidence,
         "validation_status": record.validation_status,
         "symptoms_text": record.symptoms_text,
-        "created_at": record.created_at.isoformat(),
+        "created_at": _utc_iso(record.created_at),
         "status": "completed",
         "report_text": report_data.get("text") or result_report.get("text") or "",
         "report_data": report_data,

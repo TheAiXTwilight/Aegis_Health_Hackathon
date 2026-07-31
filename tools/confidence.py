@@ -3,39 +3,28 @@ tools/confidence.py — Pipeline confidence calculation.
 
 Single authoritative implementation of the confidence formula.
 
-Formula:
-    confidence = 0.4 * coverage + 0.4 * success_rate + 0.2 * truncation
+This scores how TRUSTWORTHY the generated report is, not just whether the
+pipeline finished. It blends four signals:
 
-Severity level does NOT reduce confidence.
+    confidence = 0.40 * agreement      (does the LLM narrative match the
+                                        deterministic rule-based severity?)
+               + 0.25 * rule_strength  (how clear/strong the fired rule was)
+               + 0.20 * evidence       (how many modalities backed the result)
+               + 0.15 * pipeline_health (no tool failures, no truncation)
 
-This function computes TriageReport.confidence (pipeline-level confidence).
-It is distinct from SeverityResult.confidence (rule-level confidence),
-which comes from the highest-priority fired rule's rule_confidence value.
+A hard ceiling (0.97) means a report is never shown as 100% "certain" — a
+single clean symptom-only run with narrative↔rule agreement lands around
+0.80, a multi-modal agreeing report around 0.95+, and a report whose
+narrative disagrees with the rules drops to ~0.55.
 
-Called in agents/pipeline.py after tools_run.append("ReportGenerator")
-and after truncation flags have been set by _build_context().
+IMPORTANT / honest limitation:
+    The report text is produced by a small local LLM, which does not emit a
+    calibrated certainty for its own narrative. These four signals are the
+    best PROXIES for reliability we have; this is an engineered estimate, not
+    a ground-truth probability.
 
-Coverage semantics:
-    Coverage measures how well the pipeline handled what the user
-    submitted, not whether they submitted everything possible.
-
-    Modalities the user did not submit are NOT counted against confidence.
-    A session with only typed symptoms can reach coverage = 1.0 if the
-    symptom path succeeded.
-
-    coverage = handled / submitted
-
-    where:
-        submitted = count of modalities the user actually provided
-        handled   = count of submitted modalities that produced a
-                    non-error structured result
-
-    RAG is treated as an always-submitted pipeline modality because
-    every report attempts retrieval of supporting medical knowledge.
-    Failure of retrieval therefore reduces overall pipeline confidence.
-
-    Because RAG is always submitted, `submitted` is guaranteed to be
-    at least 1 by construction — no ZeroDivisionError guard is needed.
+Called in agents/pipeline.py AFTER the RuleValidator step so the agreement
+signal exists.
 """
 
 from __future__ import annotations
@@ -45,132 +34,142 @@ from schemas.rag import RAGSearchResult
 from schemas.state import AegisState
 
 
-_WEIGHT_COVERAGE = 0.4
-_WEIGHT_SUCCESS_RATE = 0.4
-_WEIGHT_TRUNCATION = 0.2
+# ── Weights ───────────────────────────────────────────────────────
+_WEIGHT_AGREEMENT = 0.40
+_WEIGHT_RULE = 0.25
+_WEIGHT_EVIDENCE = 0.20
+_WEIGHT_HEALTH = 0.15
 
+# Never display as 100% "certain" — medical confidence always leaves room.
+_CONFIDENCE_CEILING = 0.97
+
+# Defaults when a signal is unavailable (tool didn't run / didn't return).
+_DEFAULT_RULE_STRENGTH = 0.70
+_DEFAULT_AGREEMENT = 0.75  # validator didn't run → can't confirm or deny
+
+# Truncation penalties.
 _TRUNCATION_NONE = 1.0
 _TRUNCATION_ENRICHMENT = 0.7
 _TRUNCATION_CORE = 0.5
+
+# Distinct evidence modalities the user can contribute.
+_N_EVIDENCE_MODALITIES = 4  # symptoms, lab, x-ray, medications
 
 
 def calculate_confidence(state: AegisState) -> float:
     """
     Compute pipeline confidence from completed AegisState.
 
-    Precondition: all tools have run, truncation flags are set.
-    Returns float in [0.0, 1.0].
+    Precondition: SeverityScorer, ReportGenerator and RuleValidator have run.
+    Returns float in [0.0, _CONFIDENCE_CEILING].
     """
-    coverage = _modality_coverage(state)
-    success_rate = _tool_success_rate(state)
-    truncation = _truncation_score(state)
-
     raw = (
-        _WEIGHT_COVERAGE * coverage
-        + _WEIGHT_SUCCESS_RATE * success_rate
-        + _WEIGHT_TRUNCATION * truncation
+        _WEIGHT_AGREEMENT * _agreement_score(state)
+        + _WEIGHT_RULE * _rule_strength(state)
+        + _WEIGHT_EVIDENCE * _evidence_score(state)
+        + _WEIGHT_HEALTH * _pipeline_health(state)
     )
+    return max(0.0, min(_CONFIDENCE_CEILING, raw))
 
-    return max(0.0, min(1.0, raw))
 
-
-def _handled(result: object) -> bool:
+# ── Signal 1: deterministic ↔ LLM-narrative agreement ────────────
+def _agreement_score(state: AegisState) -> float:
     """
-    Return True when a modality/tool result exists and is not a ToolError.
-
-    Centralised so the definition of "handled successfully" lives in
-    one place. If Phase 3 introduces richer failure wrappers, only this
-    helper should need updating.
+    How well the generated narrative severity agrees with the rule-based
+    severity, from RuleValidatorResult.status.
+        agreement -> 1.00   narrative matches the deterministic analysis
+        warning   -> 0.65   minor mismatch, worth a second look
+        override  -> 0.35   narrative contradicts the rules (low trust)
+        <none>    -> 0.75   validator didn't run → neutral
     """
-    return result is not None and not isinstance(result, ToolError)
+    rv = getattr(state, "rule_validator_result", None)
+    if rv is None:
+        return _DEFAULT_AGREEMENT
+    status = getattr(rv, "status", None)
+    value = status.value if hasattr(status, "value") else str(status)
+    value = (value or "").strip().lower()
+    if value == "agreement":
+        return 1.0
+    if value == "warning":
+        return 0.65
+    if value == "override":
+        return 0.35
+    return _DEFAULT_AGREEMENT
 
 
-def _modality_coverage(state: AegisState) -> float:
+# ── Signal 2: rule strength ──────────────────────────────────────
+def _rule_strength(state: AegisState) -> float:
     """
-    Fraction of submitted modalities that produced a successful result.
-
-    Modalities the user did not submit are not counted against the score.
-
-    Submission rules:
-        symptoms — raw_symptoms_text OR audio_file_path
-        lab      — lab_pdf_path
-        xray     — xray_image_path OR xray_findings_raw OR xray_free_text_raw
-        meds     — medications_raw non-empty
-        rag      — always submitted (pipeline always attempts retrieval)
-
-    Handled rules:
-        *_result is the corresponding structured Result type
-        (not ToolError, not None)
-
-    Because RAG is always submitted, `submitted` is guaranteed to be
-    at least 1 — division is safe without a guard.
-
-    Phase 3 note: while XRayProcessor remains a stub returning None,
-    X-ray will never be handled even when submitted. This resolves
-    when the real XRayProcessor lands.
+    The fired rule's own confidence (SeverityResult.confidence), i.e. how
+    clear/strong the clinical evidence for the chosen severity was.
+    Falls back to a neutral default when the scorer didn't produce a value.
     """
-    submitted_handled_pairs: list[tuple[bool, bool]] = [
-        # Symptoms (text or audio)
+    sr = getattr(state, "severity_result", None)
+    if sr is None:
+        return _DEFAULT_RULE_STRENGTH
+    confidence = getattr(sr, "confidence", None)
+    try:
+        confidence = float(confidence)
+    except (TypeError, ValueError):
+        return _DEFAULT_RULE_STRENGTH
+    if confidence != confidence:  # NaN guard
+        return _DEFAULT_RULE_STRENGTH
+    return max(0.0, min(1.0, confidence))
+
+
+# ── Signal 3: evidence richness ──────────────────────────────────
+def _evidence_score(state: AegisState) -> float:
+    """
+    Fraction of the four evidence modalities that were both submitted AND
+    handled. Rewards multi-modality: a symptom-only report is 0.25, a
+    symptoms+labs+xray+meds report can reach 1.0.
+    """
+    pairs = [
         (
             bool(state.raw_symptoms_text) or bool(state.audio_file_path),
             _handled(state.symptom_result),
         ),
-        # Lab (PDF upload)
         (
             bool(state.lab_pdf_path),
             _handled(state.lab_result),
         ),
-        # X-ray (image OR clinician findings OR free text)
         (
             bool(state.xray_image_path)
             or bool(state.xray_findings_raw)
             or bool(state.xray_free_text_raw),
             _handled(state.xray_result),
         ),
-        # Medications
         (
             bool(state.medications_raw),
             _handled(state.drug_result),
         ),
-        # RAG — always attempted by pipeline, so always submitted.
-        # This guarantees `submitted >= 1` below.
-        (
-            True,
-            isinstance(state.rag_result, RAGSearchResult),
-        ),
     ]
+    handled = sum(1 for submitted, ok in pairs if submitted and ok)
+    return min(1.0, handled / float(_N_EVIDENCE_MODALITIES))
 
-    submitted = sum(1 for s, _ in submitted_handled_pairs if s)
-    handled = sum(1 for s, h in submitted_handled_pairs if s and h)
 
-    # submitted is guaranteed >= 1 because the RAG entry is always True.
-    return handled / submitted
+# ── Signal 4: pipeline health (kept from the original formula) ────
+def _pipeline_health(state: AegisState) -> float:
+    """success_rate × truncation_score — penalises failures/truncation."""
+    return _tool_success_rate(state) * _truncation_score(state)
+
+
+def _handled(result: object) -> bool:
+    """True when a result exists and is not a ToolError."""
+    return result is not None and not isinstance(result, ToolError)
 
 
 def _tool_success_rate(state: AegisState) -> float:
-    """
-    Fraction of tools that completed successfully.
-
-    tools_run ∩ tools_failed = ∅ enforced by AegisPipeline.
-    Floor of 1 prevents ZeroDivisionError on empty pipelines.
-    """
+    """Fraction of tools that completed successfully (floor of 1)."""
     total = len(state.tools_run) + len(state.tools_failed)
     return len(state.tools_run) / max(total, 1)
 
 
 def _truncation_score(state: AegisState) -> float:
-    """
-    Penalty score for context truncation.
-
-    Each flag can only lower the score, never raise it.
-    Core truncation dominates enrichment truncation.
-    """
+    """Penalty for context truncation. Each flag only lowers the score."""
     score = _TRUNCATION_NONE
-
     if state.enrichment_fields_truncated:
         score = min(score, _TRUNCATION_ENRICHMENT)
-
     if state.core_fields_truncated:
         score = min(score, _TRUNCATION_CORE)
-
     return score
