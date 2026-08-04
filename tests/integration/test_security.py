@@ -25,8 +25,15 @@ from backend.security import (
 
 # ── Fixtures ──────────────────────────────────────────────────
 @pytest.fixture
-def app() -> FastAPI:
-    """Create a minimal FastAPI app with security middleware installed."""
+def app(monkeypatch) -> FastAPI:
+    """Create a deterministic development-configured security test app."""
+    from app.settings import settings
+
+    # Tests must not inherit a developer's production .env. In particular,
+    # production enables HSTS and can use a different CORS allow-list.
+    monkeypatch.setattr(settings, "AEGIS_ENV", "development")
+    monkeypatch.setattr(settings, "AEGIS_CORS_ORIGINS", ["http://localhost:5173"])
+
     app = FastAPI()
 
     @app.get("/health")

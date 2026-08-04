@@ -68,15 +68,13 @@ def _reset_queue_state():
 
 @pytest.fixture(scope="module")
 def client():
-    """
-    TestClient for the FastAPI app.
+    """Use TestClient without starting the production lifespan.
 
-    Module-scoped — TestClient as context manager triggers the lifespan
-    handlers, which start the inference worker. Module scope avoids
-    repeated worker startup/teardown.
+    Health contract tests inspect the endpoint's idle baseline. Starting the
+    production lifespan starts a worker/prewarm task that can temporarily hold
+    the inference lock and make the test flaky.
     """
-    with TestClient(app) as c:
-        yield c
+    return TestClient(app)
 
 
 # ── Expected response shape ───────────────────────────────────────

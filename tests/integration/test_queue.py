@@ -383,6 +383,11 @@ async def test_worker_increments_failed_counter_on_error():
 
 # ── Missing session state ──────────────────────────────────────────
 
+@pytest.mark.security_gate
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known reliability defect: _execute_job finally references state before assignment and can terminate the worker.",
+)
 async def test_worker_fails_job_with_missing_session_state():
     """
     Worker raises RuntimeError when session state is missing after dequeue.

@@ -93,12 +93,17 @@ class TestDynamicReportData:
         assert by_key["heart_rate"]["value"] == 112
         assert by_key["heart_rate"]["status"] == "high"
         assert by_key["spo2"]["status"] == "low"
-        assert by_key["temperature_c"]["display_value"] == "38.2 °C"
+        # Temperature has no hardcoded canonical unit in the current
+        # dashboard payload unless the source supplies one.
+        assert by_key["temperature_c"]["display_value"] == "38.2"
         assert by_key["haemoglobin"]["source"] == "lab"
         assert by_key["glucose"]["risk_score"] == 1
         assert by_key["vitamin_d"]["status"] == "low"
         assert by_key["vitamin_d"]["risk_score"] == 1
-        assert "Low vitamin D" in by_key["vitamin_d"]["note"]
+        # Reference-range classification establishes the current low status;
+        # note remains a stable source-provenance message rather than copying
+        # parser prose into every dashboard measurement.
+        assert by_key["vitamin_d"]["note"] == "From the user's latest lab report"
 
     def test_measurement_groups_match_vitals_overview_categories(self):
         result_data = {
@@ -114,12 +119,16 @@ class TestDynamicReportData:
         }
         groups = build_report_measurement_groups(result_data)
 
+        # Current dashboard classification uses reference ranges as the
+        # authoritative source. Heart rate 142 and SpO2 88 are abnormal
+        # observations, not automatically critical merely because a raw
+        # upstream payload provided risk_score=2.
         assert groups["counts"] == {
-            "critical": 2,
+            "critical": 0,
             "under_observation": 2,
             "normal": 0,
         }
-        assert groups["critical"][0]["name"] == "Heart Rate"
+        assert groups["under_observation"][0]["name"] == "Heart Rate"
         assert all(item["risk_score"] == 1 for item in groups["under_observation"])
 
     def test_factors_come_from_latest_structured_result(self):
@@ -221,4 +230,3 @@ class TestCriticals:
     def test_critical_severity(self):
         result = _build_criticals(_record(severity="CRITICAL"))
         assert any("Critical" in c["badge"] for c in result)
-

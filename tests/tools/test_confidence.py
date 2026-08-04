@@ -1,387 +1,188 @@
+"""Tests for the current calibrated pipeline-confidence model.
+
+The previous suite asserted the retired coverage/success/truncation formula.
+Confidence now combines rule-validator agreement, deterministic-rule strength,
+evidence richness, and pipeline health, with a medical ceiling below 1.0.
 """
-tests/tools/test_confidence.py — calculate_confidence formula.
-
-Formula: confidence = 0.4 * coverage + 0.4 * success_rate + 0.2 * truncation
-
-Coverage signal   (weight 0.4): handled / submitted
-                                Only counts submitted modalities.
-                                Unsubmitted modalities are not penalised.
-                                RAG is always submitted (pipeline always
-                                attempts retrieval), guaranteeing
-                                submitted >= 1.
-Success signal    (weight 0.4): tools_run / (tools_run + tools_failed)
-Truncation signal (weight 0.2): 1.0 / 0.7 / 0.5
-
-Severity level does NOT affect confidence.
-
-Coverage semantics:
-    A modality is "submitted" when the user provided the corresponding
-    input. A modality is "handled" when the corresponding tool produced
-    a non-error structured result. Coverage = handled / submitted.
-
-    Tests use _state_with() to control which modalities are submitted
-    and inject pre-built results to control which are handled.
-"""
-
 from __future__ import annotations
+
+import pytest
 
 from schemas.drugs import DrugInteractionResult
 from schemas.errors import ToolError
 from schemas.lab import LabReportResult
-from schemas.rag import RAGSearchResult
+from schemas.severity import SeverityResult
 from schemas.state import AegisState
 from schemas.symptom import SymptomExtractionResult
+from schemas.validation import RuleValidatorResult, ValidationStatus
 from schemas.xray import XRayResult
 from tools.confidence import calculate_confidence
 
 
-# ── Helpers ────────────────────────────────────────────────────────
-
-def _state_with(
+def build_state(
     *,
+    agreement: ValidationStatus | None = ValidationStatus.AGREEMENT,
+    rule_confidence: float = 0.8,
     symptoms: bool = False,
-    lab: bool = False,
+    labs: bool = False,
     xray: bool = False,
-    meds: bool = False,
-    rag: bool = False,
-    symptoms_handled: bool = True,
-    lab_handled: bool = True,
-    xray_handled: bool = True,
-    meds_handled: bool = True,
+    medications: bool = False,
+    handled: bool = True,
     tools_run: list[str] | None = None,
     tools_failed: list[str] | None = None,
     core_truncated: bool = False,
     enrichment_truncated: bool = False,
 ) -> AegisState:
-    """
-    Build a state with explicit control over submitted vs handled
-    for each modality.
-
-    Submitted is controlled by setting the input field.
-    Handled is controlled by injecting a successful result (default)
-    or a ToolError (when *_handled=False).
-
-    RAG is always submitted by the pipeline. The `rag` flag controls
-    whether the result is a successful RAGSearchResult (rag=True) or
-    absent / failed (rag=False).
-    """
     state = AegisState(
-        raw_symptoms_text="text" if symptoms else None,
-        lab_pdf_path="/tmp/lab.pdf" if lab else None,
-        xray_image_path="/tmp/xray.jpg" if xray else None,
-        medications_raw=["drug"] if meds else [],
+        raw_symptoms_text="synthetic symptoms" if symptoms else None,
+        lab_pdf_path="/tmp/lab.pdf" if labs else None,
+        xray_image_path="/tmp/xray.png" if xray else None,
+        medications_raw=["aspirin"] if medications else [],
     )
 
     if symptoms:
         state.symptom_result = (
-            SymptomExtractionResult(symptoms=["x"])
-            if symptoms_handled
-            else ToolError(tool="SymptomExtractor", reason="fail")
+            SymptomExtractionResult(symptoms=["headache"])
+            if handled else ToolError(tool="SymptomExtractor", reason="failed")
         )
-    if lab:
+    if labs:
         state.lab_result = (
-            LabReportResult()
-            if lab_handled
-            else ToolError(tool="LabReportParser", reason="fail")
+            LabReportResult(measurements={"glucose": 100.0})
+            if handled else ToolError(tool="LabReportParser", reason="failed")
         )
     if xray:
         state.xray_result = (
-            XRayResult(findings=["Cardiomegaly"])
-            if xray_handled
-            else ToolError(tool="XRayProcessor", reason="fail")
+            XRayResult(findings=["Normal / No significant findings"])
+            if handled else ToolError(tool="XRayProcessor", reason="failed")
         )
-    if meds:
+    if medications:
         state.drug_result = (
-            DrugInteractionResult(confidence=1.0)
-            if meds_handled
-            else ToolError(tool="DrugInteractionChecker", reason="fail")
+            DrugInteractionResult(resolved=["aspirin"], confidence=1.0)
+            if handled else ToolError(tool="DrugInteractionChecker", reason="failed")
         )
 
-    if rag:
-        state.rag_result = RAGSearchResult(
-            passages=[],
-            citations=[],
-            query_used="test",
-            retrieval_successful=True,
+    state.severity_result = SeverityResult(
+        level="LOW",
+        confidence=rule_confidence,
+        triggered_rules=["RULE_DEFAULT_LOW"],
+        highest_priority_rule="RULE_DEFAULT_LOW",
+        reasons=["Synthetic test rule."],
+        contributing_tools=[],
+    )
+    if agreement is not None:
+        state.rule_validator_result = RuleValidatorResult(
+            status=agreement,
+            deterministic_level="LOW",
+            slm_narrative_level="LOW",
+            overridden=agreement == ValidationStatus.OVERRIDE,
         )
-
-    state.tools_run = tools_run or []
-    state.tools_failed = tools_failed or []
+    state.tools_run = tools_run if tools_run is not None else ["SyntheticTool"]
+    state.tools_failed = tools_failed if tools_failed is not None else []
     state.core_fields_truncated = core_truncated
     state.enrichment_fields_truncated = enrichment_truncated
     return state
 
 
-# ── Output range ───────────────────────────────────────────────────
-
-def test_confidence_in_range_zero_to_one():
-    state = _state_with()
-    c = calculate_confidence(state)
-    assert 0.0 <= c <= 1.0
-
-
-def test_confidence_maximum_on_full_clean_run():
-    """
-    All 5 modalities submitted and handled, all tools succeeded,
-    no truncation → 1.0.
-    """
-    state = _state_with(
-        symptoms=True, lab=True, xray=True, meds=True, rag=True,
-        tools_run=["A", "B", "C"],
+def test_confidence_is_bounded_by_zero_and_medical_ceiling():
+    empty = build_state(agreement=None, tools_run=[])
+    full = build_state(
+        agreement=ValidationStatus.AGREEMENT,
+        rule_confidence=1.0,
+        symptoms=True,
+        labs=True,
+        xray=True,
+        medications=True,
+        tools_run=["A", "B", "C", "D"],
     )
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
+    assert 0.0 <= calculate_confidence(empty) <= 0.97
+    assert calculate_confidence(full) == pytest.approx(0.97)
 
 
-# ── Coverage signal — submitted vs handled ───────────────────────
+def test_agreement_status_orders_confidence_by_validation_trust():
+    agreement = calculate_confidence(build_state(agreement=ValidationStatus.AGREEMENT))
+    warning = calculate_confidence(build_state(agreement=ValidationStatus.WARNING))
+    override = calculate_confidence(build_state(agreement=ValidationStatus.OVERRIDE))
+    unavailable = calculate_confidence(build_state(agreement=None))
 
-def test_coverage_only_rag_submitted_and_handled():
-    """
-    Nothing submitted by user. RAG always submitted by pipeline.
-    submitted=1, handled=1 → coverage = 1.0.
-    """
-    state = _state_with(rag=True, tools_run=["A"])
-    # 0.4 * 1.0 + 0.4 * 1.0 + 0.2 * 1.0 = 1.0
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
+    assert agreement > unavailable > warning > override
 
 
-def test_coverage_symptoms_only_fully_handled():
-    """
-    User submits symptoms only. RAG always submitted.
-    Both handled → coverage = 2/2 = 1.0.
-    """
-    state = _state_with(symptoms=True, rag=True, tools_run=["A"])
-    # 0.4 * 1.0 + 0.4 * 1.0 + 0.2 * 1.0 = 1.0
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
+def test_rule_confidence_changes_the_rule_strength_component():
+    low_rule = calculate_confidence(build_state(rule_confidence=0.4))
+    high_rule = calculate_confidence(build_state(rule_confidence=0.95))
+    assert high_rule > low_rule
 
 
-def test_coverage_symptoms_submitted_but_failed():
-    """
-    Symptoms submitted but extractor failed. RAG succeeded.
-    submitted=2, handled=1 → coverage = 0.5.
-    """
-    state = _state_with(
-        symptoms=True, symptoms_handled=False,
-        rag=True,
-        tools_run=["A"],
+def test_each_handled_user_submitted_modality_increases_evidence_score():
+    no_evidence = calculate_confidence(build_state())
+    symptom_only = calculate_confidence(build_state(symptoms=True))
+    symptoms_and_labs = calculate_confidence(build_state(symptoms=True, labs=True))
+    all_modalities = calculate_confidence(
+        build_state(symptoms=True, labs=True, xray=True, medications=True)
     )
-    # 0.4 * 0.5 + 0.4 * 1.0 + 0.2 * 1.0 = 0.8
-    c = calculate_confidence(state)
-    assert abs(c - 0.8) < 1e-9
+
+    assert no_evidence < symptom_only < symptoms_and_labs < all_modalities
 
 
-def test_coverage_all_modalities_submitted_all_handled():
-    """All 5 submitted, all handled → coverage = 1.0."""
-    state = _state_with(
-        symptoms=True, lab=True, xray=True, meds=True, rag=True,
-        tools_run=["A"],
+def test_rag_result_does_not_count_as_a_user_evidence_modality():
+    state_without_rag = build_state(symptoms=True)
+    state_with_rag = build_state(symptoms=True)
+    # RAG may enrich a report but it is not one of the four user-submitted
+    # evidence modalities in the current confidence contract.
+    state_with_rag.rag_result = object()
+    assert calculate_confidence(state_with_rag) == calculate_confidence(state_without_rag)
+
+
+def test_unhandled_submitted_modality_does_not_receive_evidence_credit():
+    handled = calculate_confidence(build_state(symptoms=True, handled=True))
+    failed = calculate_confidence(
+        build_state(
+            symptoms=True,
+            handled=False,
+            tools_run=[],
+            tools_failed=["SymptomExtractor"],
+        )
     )
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
+    assert handled > failed
 
 
-def test_coverage_partial_submission_all_handled():
-    """
-    User submits symptoms + meds only. RAG always submitted.
-    All 3 handled → coverage = 3/3 = 1.0.
-    """
-    state = _state_with(
-        symptoms=True, meds=True, rag=True,
-        tools_run=["A"],
+def test_tool_failure_reduces_pipeline_health_component():
+    clean = calculate_confidence(build_state(symptoms=True, tools_run=["A", "B"]))
+    partial_failure = calculate_confidence(
+        build_state(symptoms=True, tools_run=["A"], tools_failed=["B"])
     )
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
-
-
-def test_coverage_unsubmitted_modalities_do_not_penalise():
-    """
-    Demonstrates the corrected semantics: submitting fewer modalities
-    does not reduce confidence if everything submitted was handled.
-    """
-    state_minimal = _state_with(symptoms=True, rag=True, tools_run=["A"])
-    state_full = _state_with(
-        symptoms=True, lab=True, xray=True, meds=True, rag=True,
-        tools_run=["A"],
+    all_failed = calculate_confidence(
+        build_state(symptoms=True, tools_run=[], tools_failed=["A", "B"])
     )
-    assert calculate_confidence(state_minimal) == calculate_confidence(state_full)
+    assert clean > partial_failure > all_failed
 
 
-def test_coverage_rag_tool_error_reduces_coverage():
-    """
-    RAG is always submitted. If rag_result is a ToolError, RAG
-    counts as submitted-but-not-handled.
-    submitted=2 (symptoms+rag), handled=1 (symptoms) → 0.5.
-    """
-    state = _state_with(symptoms=True, tools_run=["A"])
-    state.rag_result = ToolError(tool="MedicalRAGSearch", reason="fail")
-    # 0.4 * 0.5 + 0.4 * 1.0 + 0.2 * 1.0 = 0.8
-    c = calculate_confidence(state)
-    assert abs(c - 0.8) < 1e-9
-
-
-def test_coverage_xray_findings_count_as_submitted():
-    """
-    X-ray modality counts as submitted when clinician findings are
-    provided even without an image upload.
-    """
-    state = AegisState(
-        raw_symptoms_text="text",
-        xray_findings_raw=["Cardiomegaly"],
+def test_enrichment_and_core_truncation_apply_increasing_penalties():
+    clean = calculate_confidence(build_state(symptoms=True))
+    enrichment = calculate_confidence(build_state(symptoms=True, enrichment_truncated=True))
+    core = calculate_confidence(build_state(symptoms=True, core_truncated=True))
+    both = calculate_confidence(
+        build_state(symptoms=True, core_truncated=True, enrichment_truncated=True)
     )
-    state.symptom_result = SymptomExtractionResult(symptoms=["x"])
-    state.xray_result = XRayResult(findings=["Cardiomegaly"])
-    state.rag_result = RAGSearchResult(
-        passages=[], citations=[], query_used="t", retrieval_successful=True,
-    )
-    state.tools_run = ["A"]
-    # submitted: symptoms, xray, rag = 3; all handled = 3 → 1.0
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
+
+    assert clean > enrichment > core
+    assert both == core
 
 
-def test_coverage_xray_free_text_counts_as_submitted():
-    """
-    X-ray modality counts as submitted when free text is provided
-    even without image or checklist findings.
-    """
-    state = AegisState(
-        raw_symptoms_text="text",
-        xray_free_text_raw="mild interstitial markings",
-    )
-    state.symptom_result = SymptomExtractionResult(symptoms=["x"])
-    state.xray_result = XRayResult(free_text="ok")
-    state.rag_result = RAGSearchResult(
-        passages=[], citations=[], query_used="t", retrieval_successful=True,
-    )
-    state.tools_run = ["A"]
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
+def test_confidence_uses_neutral_defaults_when_validator_or_scorer_is_absent():
+    state = AegisState(raw_symptoms_text="synthetic")
+    state.symptom_result = SymptomExtractionResult(symptoms=["headache"])
+    state.tools_run = ["SymptomExtractor"]
+    value = calculate_confidence(state)
+    assert 0.0 < value < 0.97
 
 
-def test_coverage_audio_path_counts_as_symptoms_submitted():
-    """Audio file path counts as symptoms modality submitted."""
-    state = AegisState(audio_file_path="/tmp/audio.wav")
-    state.symptom_result = SymptomExtractionResult(symptoms=["x"])
-    state.rag_result = RAGSearchResult(
-        passages=[], citations=[], query_used="t", retrieval_successful=True,
-    )
-    state.tools_run = ["A"]
-    # submitted: symptoms, rag = 2; handled: 2 → 1.0
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
+def test_nan_rule_confidence_falls_back_safely():
+    # Pydantic correctly rejects NaN in a real SeverityResult. Exercise the
+    # defensive helper path with a deliberately malformed legacy-like object.
+    from types import SimpleNamespace
 
-
-# ── Success rate signal ────────────────────────────────────────────
-
-def test_success_rate_all_succeeded():
-    """All tools succeeded, no submissions beyond default RAG."""
-    state = _state_with(rag=True, tools_run=["A", "B", "C"])
-    # coverage = 1.0, success = 3/3 = 1.0, truncation = 1.0 → 1.0
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
-
-
-def test_success_rate_partial_failure():
-    state = _state_with(
-        symptoms=True, rag=True,
-        tools_run=["A", "B"],
-        tools_failed=["C"],
-    )
-    # coverage = 1.0, success = 2/3, truncation = 1.0
-    expected = 0.4 * 1.0 + 0.4 * (2 / 3) + 0.2 * 1.0
-    c = calculate_confidence(state)
-    assert abs(c - expected) < 1e-6
-
-
-def test_success_rate_all_failed():
-    """
-    No successful tools.
-
-    RAG is always considered submitted by the pipeline, but no
-    RAGSearchResult was produced, so coverage = 0/1 = 0.0.
-    """
-    state = _state_with(tools_failed=["A", "B"])
-    # coverage = handled/submitted: submitted=1 (rag), handled=0 → 0.0
-    # success = 0/2 = 0.0
-    # truncation = 1.0
-    expected = 0.4 * 0.0 + 0.4 * 0.0 + 0.2 * 1.0
-    c = calculate_confidence(state)
-    assert abs(c - expected) < 1e-9
-
-
-def test_success_rate_no_tools_at_all():
-    """Floor of 1 prevents ZeroDivisionError."""
-    state = _state_with()
-    c = calculate_confidence(state)
-    assert 0.0 <= c <= 1.0
-
-
-# ── Truncation signal ──────────────────────────────────────────────
-
-def test_no_truncation_score_is_1_0():
-    state = _state_with(symptoms=True, rag=True, tools_run=["A"])
-    # coverage = 1.0, success = 1.0, truncation = 1.0 → 1.0
-    c = calculate_confidence(state)
-    assert abs(c - 1.0) < 1e-9
-
-
-def test_enrichment_truncation_score_is_0_7():
-    state = _state_with(
-        symptoms=True, rag=True, tools_run=["A"],
-        enrichment_truncated=True,
-    )
-    expected = 0.4 * 1.0 + 0.4 * 1.0 + 0.2 * 0.7
-    c = calculate_confidence(state)
-    assert abs(c - expected) < 1e-9
-
-
-def test_core_truncation_score_is_0_5():
-    state = _state_with(
-        symptoms=True, rag=True, tools_run=["A"],
-        core_truncated=True,
-    )
-    expected = 0.4 * 1.0 + 0.4 * 1.0 + 0.2 * 0.5
-    c = calculate_confidence(state)
-    assert abs(c - expected) < 1e-9
-
-
-def test_core_truncation_dominates_enrichment():
-    state = _state_with(
-        symptoms=True, rag=True, tools_run=["A"],
-        core_truncated=True, enrichment_truncated=True,
-    )
-    expected = 0.4 * 1.0 + 0.4 * 1.0 + 0.2 * 0.5
-    c = calculate_confidence(state)
-    assert abs(c - expected) < 1e-9
-
-
-# ── Severity does not affect confidence ───────────────────────────
-
-def test_severity_level_does_not_affect_confidence(
-    severity_high, severity_low
-):
-    """LOW and HIGH severity on identical state produce identical confidence."""
-    state_high = _state_with(symptoms=True, rag=True, tools_run=["A", "B"])
-    state_high.severity_result = severity_high
-
-    state_low = _state_with(symptoms=True, rag=True, tools_run=["A", "B"])
-    state_low.severity_result = severity_low
-
-    assert calculate_confidence(state_high) == calculate_confidence(state_low)
-
-
-# ── Clamping ───────────────────────────────────────────────────────
-
-def test_confidence_never_below_zero():
-    state = _state_with(tools_failed=["A", "B", "C"])
-    assert calculate_confidence(state) >= 0.0
-
-
-def test_confidence_never_above_one():
-    state = _state_with(
-        symptoms=True, lab=True, xray=True, meds=True, rag=True,
-        tools_run=["A", "B", "C", "D", "E"],
-    )
-    assert calculate_confidence(state) <= 1.0
+    state = build_state()
+    state.severity_result = SimpleNamespace(confidence=float("nan"))
+    value = calculate_confidence(state)
+    assert 0.0 <= value <= 0.97

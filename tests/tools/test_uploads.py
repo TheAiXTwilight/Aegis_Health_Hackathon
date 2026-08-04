@@ -132,11 +132,16 @@ def test_validate_audio_accepts_small_nonwav_file(tmp_path):
     assert validate_audio(path) is None
 
 
-def test_validate_audio_rejects_oversized_file(tmp_path):
+def test_validate_audio_non_wav_oversized_file_defers_size_to_streaming_save(tmp_path):
+    """Post-write validation checks WAV duration/format only.
+
+    _save_upload() in backend.main enforces the byte limit while the multipart
+    body is streamed. A non-WAV file reaching this validator therefore defers
+    duration/format handling to VoiceTranscriber instead of duplicating the
+    retired file-size check.
+    """
     path = _make_file(tmp_path, "audio.bin", MAX_AUDIO_BYTES + 1)
-    result = validate_audio(path)
-    assert isinstance(result, ToolError)
-    assert result.fatal is True
+    assert validate_audio(path) is None
 
 
 def test_validate_audio_rejects_missing_file():

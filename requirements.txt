@@ -14,6 +14,8 @@ email-validator>=2.0.0
 
 # Uploads / async I/O
 aiofiles>=24.0.0
+pytest>=8.0.0
+async-timeout>=4.0.3
 python-multipart>=0.0.12
 python-magic>=0.4.27
 

@@ -44,9 +44,10 @@ Singleton patch note:
 from __future__ import annotations
 
 import struct
+import sys
 import wave
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -347,7 +348,9 @@ async def test_whisper_runtime_error_returns_tool_error(wav_path):
     assert isinstance(result, ToolError)
     assert result.fatal is False
     assert result.tool == TOOL_VOICE_TRANSCRIBER
-    assert "RuntimeError" in result.reason
+    # Current user-facing error contract preserves the actionable message
+    # without leaking an implementation-specific exception class name.
+    assert "CUDA OOM" in result.reason
 
 
 async def test_model_load_failure_returns_tool_error(wav_path):
@@ -416,15 +419,20 @@ def test_load_model_called_once_across_multiple_calls(monkeypatch):
     vt_module._MODEL = None  # reset singleton for this test
 
     try:
-        with patch("faster_whisper.WhisperModel") as mock_cls:
-            mock_cls.return_value = MagicMock()
+        # faster_whisper is an optional runtime dependency. Inject a minimal
+        # source module so this singleton contract remains testable in the
+        # fast suite without installing model binaries.
+        fake_module = ModuleType("faster_whisper")
+        mock_cls = MagicMock(return_value=MagicMock())
+        fake_module.WhisperModel = mock_cls
+        monkeypatch.setitem(sys.modules, "faster_whisper", fake_module)
 
-            from tools.voice_transcriber import _load_model
-            _load_model()
-            _load_model()
-            _load_model()
+        from tools.voice_transcriber import _load_model
+        _load_model()
+        _load_model()
+        _load_model()
 
-            mock_cls.assert_called_once()
+        mock_cls.assert_called_once()
     finally:
         vt_module._MODEL = original_model  # restore
 

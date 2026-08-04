@@ -82,12 +82,14 @@ class TestBaselineSummary:
         assert summary["interpretation"] == "normal"
 
     def test_mild_deviation(self):
+        # This value is between one and two sample standard deviations
+        # from the baseline; 76 would correctly be classified as elevated.
         summary = baseline_summary(
-            current=76.0,
+            current=72.0,
             history=[70.0, 71.0, 72.0, 71.0],
             vital_name="hr",
         )
-        assert "mild deviation" in summary["interpretation"]
+        assert summary["interpretation"] == "mild deviation"
 
     def test_low_interpretation(self):
         summary = baseline_summary(

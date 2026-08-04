@@ -42,15 +42,15 @@ from schemas.state import AegisState
 
 @pytest.fixture(scope="module")
 def client():
-    """
-    TestClient for the FastAPI app.
+    """TestClient without entering the production lifespan.
 
-    Module-scoped because lifespan startup includes the inference
-    worker. Module scope avoids repeated startup/teardown across
-    every test.
+    These tests exercise synchronous input/status endpoint contracts. Starting
+    the real application lifespan would also start the global inference worker,
+    allowing it to race with queue-unit tests that intentionally manipulate
+    queue internals. Worker behaviour is covered separately with injected
+    fake pipelines.
     """
-    with TestClient(app) as c:
-        yield c
+    return TestClient(app)
 
 
 # ── Per-test queue state reset ────────────────────────────────────
