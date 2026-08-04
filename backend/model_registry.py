@@ -269,20 +269,28 @@ class ModelRegistry:
         else:
             options["temperature"] = settings.OLLAMA_TEMPERATURE
 
-        client = httpx.AsyncClient(timeout=timeout)
-        resp = await client.post(
-            f"{self._ollama_url}/api/generate",
-            json={
-                "model": self._ollama_model,
-                "prompt": prompt,
-                "stream": stream,
-                "options": options,
-            },
-        )
-        if not stream:
+        # FIXED: previously created without `async with`, leaking one
+        # unclosed HTTP connection to Ollama on every single call. Over
+        # a session with many report generations this accumulates
+        # lingering open connections against Ollama's Go HTTP server —
+        # a plausible contributor to intermittent "llama runner process
+        # has terminated" crashes on the shared Jetson board. No caller
+        # in this codebase currently uses stream=True, so the client is
+        # always safely closed via `async with` before returning.
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(
+                f"{self._ollama_url}/api/generate",
+                json={
+                    "model": self._ollama_model,
+                    "prompt": prompt,
+                    "stream": stream,
+                    "options": options,
+                },
+            )
             resp.raise_for_status()
-            return resp.json()
-        return resp
+            if not stream:
+                return resp.json()
+            return resp
 
 
     # ── Model check ──────────────────────────────────────────

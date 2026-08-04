@@ -31,11 +31,21 @@ else
     echo "Both TTS patches confirmed present."
 fi
 
-echo "=== 4. Checking Ollama reachability ==="
-if curl -sf http://172.17.0.1:11434/api/tags > /dev/null; then
-    echo "Ollama reachable at 172.17.0.1:11434"
-else
-    echo "WARNING: Ollama not reachable — check board status manually."
+echo "=== 4. Verifying Ollama can actually run inference (not just reachable) ==="
+OLLAMA_OK=0
+for i in 1 2 3 4 5; do
+    RESULT=$(curl -s -X POST http://172.17.0.1:11434/api/generate -d '{"model":"llama3.2:1b","prompt":"test","stream":false}')
+    if echo "$RESULT" | grep -q '"done":true'; then
+        echo "Ollama inference healthy (attempt $i)."
+        OLLAMA_OK=1
+        break
+    else
+        echo "Attempt $i: Ollama runner not healthy yet ($RESULT). Waiting 20s..."
+        sleep 20
+    fi
+done
+if [ "$OLLAMA_OK" = "0" ]; then
+    echo "WARNING: Ollama still not healthy after 5 attempts (~100s). This is a board-level issue outside this app — continuing anyway, retry manually or contact organizers if it persists."
 fi
 
 echo "=== 5. Checking .env ==="
