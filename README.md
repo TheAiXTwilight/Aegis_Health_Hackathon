@@ -228,7 +228,3 @@ pytest
 - In-process FIFO queue, not backed by an external broker
 - SQLite fits single-device/single-clinic deployments, not multi-tenant scale
 - The 1B-parameter planning LLM is intentionally lightweight for edge latency; robustness is backstopped by the deterministic `PlanValidator`/`RuleValidator` safety checks rather than the model itself
-
-## License
-
-No license file was found in the current repository. Add one (e.g. MIT, Apache-2.0) before treating this as open source.
